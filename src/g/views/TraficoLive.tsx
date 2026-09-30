@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { BusFront, ExternalLink, Gauge, Maximize2, Radio, RefreshCw, Route, Settings2, Users, WifiOff, X } from 'lucide-react';
 import { UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName, aggregate } from '../data';
 import { fmt, pct } from '../ui';
+import { useDrill } from '../drill';
 
 /** Flotas con vista en vivo de Micronauta (servidas por micronauta-live/micronauta_live.py). */
 const LIVE: Partial<Record<UnitName, { feed: string; vista: string; usuario: string }>> = {
@@ -59,6 +60,7 @@ export function TraficoLive({ unit, notify }: { unit: UnitFilter; notify: (m: st
   const [cfg, setCfg] = useState(false);
   const [big, setBig] = useState<UnitName | null>(null);
   const br = useBridge(base);
+  const drill = useDrill();
   const liveList = list.filter((u) => LIVE[u]);
   const saveBase = (v: string) => { const clean = v.trim().replace(/\/$/, '') || DEFAULT_BRIDGE; setBase(clean); try { localStorage.setItem('micronauta-live-url', clean); } catch { /* sin almacenamiento */ } setCfg(false); notify(`Servicio en vivo: ${clean}`); };
 
@@ -88,12 +90,12 @@ export function TraficoLive({ unit, notify }: { unit: UnitFilter; notify: (m: st
     <div className="live-grid">
       {list.map((u, idx) => { const a = aggregate(u, [11]); const color = UNIT_COLOR[u];
         return <motion.article key={u} className={`live-card ${LIVE[u] ? '' : 'off'}`} style={{ ['--tone' as string]: color }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.06 }}>
-          <div className="live-card-head"><div><span className="section-kicker">Tráfico · {u}</span><h3>{u}</h3></div>{LIVE[u] ? <span className="live-tag"><Radio size={13} /> MICRONAUTA</span> : <span className="live-tag off"><WifiOff size={13} /> SIN ENLACE</span>}</div>
+          <div className="live-card-head"><button className="live-card-title" onClick={() => drill.openBase(u)} title={`Ficha de ${u}`}><span className="section-kicker">Tráfico · {u}</span><h3>{u}</h3></button>{LIVE[u] ? <span className="live-tag"><Radio size={13} /> MICRONAUTA</span> : <span className="live-tag off"><WifiOff size={13} /> SIN ENLACE</span>}</div>
           <div className="live-stats">
-            <div><Gauge size={15} /><span>Servicios cumplidos</span><b>{pct(a.cumpl)}</b></div>
-            <div><Users size={15} /><span>Choferes activos</span><b>{fmt(Math.round(a.oper * 1.55))}</b></div>
-            <div><Route size={15} /><span>Km recorridos hoy</span><b>{fmt(Math.round(a.kmExec / 30))}</b></div>
-            <div><BusFront size={15} /><span>Unidades en calle</span><b>{fmt(Math.round(a.oper * 0.78))}</b></div>
+            <button onClick={() => drill.openMetric('cumpl', { unit: u })}><Gauge size={15} /><span>Servicios cumplidos</span><b>{pct(a.cumpl)}</b></button>
+            <button onClick={() => drill.openMetric('cob', { unit: u })}><Users size={15} /><span>Choferes activos</span><b>{fmt(Math.round(a.oper * 1.55))}</b></button>
+            <button onClick={() => drill.openMetric('kmExec', { unit: u })}><Route size={15} /><span>Km recorridos hoy</span><b>{fmt(Math.round(a.kmExec / 30))}</b></button>
+            <button onClick={() => drill.openMetric('oper', { unit: u })}><BusFront size={15} /><span>Unidades en calle</span><b>{fmt(Math.round(a.oper * 0.78))}</b></button>
           </div>
           {!LIVE[u] && <p className="live-off-note">Cuando haya usuario de Micronauta para {u}, se suma al vivo agregándolo en el servicio.</p>}
         </motion.article>; })}

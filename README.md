@@ -59,3 +59,12 @@ Todo se construyó **encima** del tablero con la imagen real del bus: la ficha t
 - **Datos unificados**: los indicadores de Gerencia se calculan con la misma flota (163 internos) y las mismas OT de `src/data/fleet.ts`. El plan de mantenimiento por km de cada coche ahora sale de sus OT de preventivo/service. Fecha de corte de la demo: 30/09/2026.
 - **Versión HTML de un solo archivo**: `npm run build:html` → `dist-html/index.html` (se abre con doble clic, sin servidor).
 - **Modo claro / oscuro**: botón sol/luna en la barra superior (se recuerda en el navegador). El tema claro (`src/theme-light.css`) se genera desde las hojas oscuras con `npm run theme:light` (`scripts/gen-light-theme.py`); correrlo después de cambiar estilos.
+
+## Interacciones y profundización (30/09/2026)
+
+- **Detalle de cada indicador** (`src/g/metrics.ts`, `src/g/views/MetricDrawer.tsx`): casi todas las tarjetas (Gerencia, Taller, Siniestros, RR.HH., Combustible, Tráfico, alertas y gráficos) abren su evolución de 12 meses, la comparación por base, el detalle mensual y un acceso al módulo/pestaña.
+- **Ficha de unidad de negocio** (`src/g/views/BaseDetail.tsx`): KPIs, estado de flota, líneas, coches en taller, siniestros del mes y accesos; "Abrir el panel de…" filtra el tablero por esa base y cierra la ficha.
+- **Stock de pañol** (pestaña de Taller, `src/g/stock.ts`): stock, mínimo, consumo real de las OT, cobertura, estado, valor y compra sugerida; cada material muestra su consumo mensual y las OT que lo usaron.
+- **Combustible** (`src/g/views/Combustible.tsx`): litros, km/l, costo, por base, ranking y desvíos por coche.
+- **Búsqueda global** (atajo `/`), **configuración**, **ayuda**, **comparativa de bases**, **todas las alertas** y **exportar a Excel (CSV)** reales.
+- Esc cierra sólo la ventana superior. Respaldo previo: tag `respaldo-2026-09-30-antes-interacciones`.

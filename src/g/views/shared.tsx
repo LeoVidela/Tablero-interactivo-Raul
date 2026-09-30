@@ -11,8 +11,8 @@ export function TD({ cur, prev, goodUp = true, mode = 'count' }: { cur: number; 
   const zero = Math.abs(p) < 0.05; const good = (d > 0) === goodUp;
   return <span className={`delta ${zero ? 'neutral' : good ? 'up-good' : 'up-bad'}`}>{d >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}{mode === 'count' ? `${d > 0 ? '+' : d < 0 ? '−' : ''}${fmt(Math.abs(d))} (${fmt(Math.abs(p), 1)}%)` : `${p >= 0 ? '+' : '−'}${fmt(Math.abs(p), 1)}%`}<em>vs. mes ant.</em></span>;
 }
-export function Tile({ icon: Icon, label, value, sub, color, children }: { icon: React.ElementType; label: string; value: React.ReactNode; sub?: string; color: string; children?: React.ReactNode }) {
-  return <div className="t-tile" style={{ ['--tone' as string]: color }}><div className="t-tile-top"><span className="t-tile-icon"><Icon size={19} /></span><span className="t-tile-label">{label}</span></div><div className="t-tile-value"><strong>{value}</strong>{sub && <small>{sub}</small>}</div>{children}</div>;
+export function Tile({ icon: Icon, label, value, sub, color, children, onClick }: { icon: React.ElementType; label: string; value: React.ReactNode; sub?: string; color: string; children?: React.ReactNode; onClick?: () => void }) {
+  return <div className={`t-tile ${onClick ? 'clickable' : ''}`} style={{ ['--tone' as string]: color }} {...(onClick ? { role: 'button', tabIndex: 0, onClick, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }, title: 'Ver detalle' } : {})}><div className="t-tile-top"><span className="t-tile-icon"><Icon size={19} /></span><span className="t-tile-label">{label}</span></div><div className="t-tile-value"><strong>{value}</strong>{sub && <small>{sub}</small>}</div>{children}</div>;
 }
 export function Donut({ data, center, sub }: { data: { name: string; value: number; color: string }[]; center: string; sub?: string }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;

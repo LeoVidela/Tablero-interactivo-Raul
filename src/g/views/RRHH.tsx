@@ -4,6 +4,9 @@ import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardList, Download, Fil
 import { MONTH_FULL, MONTH_LABELS, UNIT_COLOR, UnitFilter, UnitName, unitsOf } from '../data';
 import { AREAS, AREA_COLOR, EMPS, Emp, areaRows, empHistory, empMonths, hrTotals, riskLevel } from '../rrhh';
 import { AXIS, GRID, Panel, TOOLTIP_STYLE, fmt, moneyM, pct } from '../ui';
+import { useDrill } from '../drill';
+import { exportView } from '../export';
+import type { MetricKey } from '../metrics';
 
 const Tip = <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'var(--cursor)' }} />;
 function Delta({ cur, prev, goodUp = true }: { cur: number; prev: number | null; goodUp?: boolean }) {
@@ -23,7 +26,7 @@ export function RRHHView({ unit, notify }: { unit: UnitFilter; notify: (m: strin
   return <div className="rrhh">
     <section className="t-header">
       <div className="t-title"><span className="t-title-icon" style={{ background: 'linear-gradient(135deg,#2563eb,#1e3a8a)' }}><Users size={24} /></span><div><span className="section-kicker">Recursos humanos</span><h2>Dashboard RR.HH.</h2><p>{unit === 'Todos' ? 'Todas las unidades de negocio' : unit}</p></div></div>
-      <div className="t-header-tools"><label className="g-select"><CalendarDays size={16} /><span>Mes seleccionado<select value={m} onChange={(e) => setM(Number(e.target.value))}>{MONTH_FULL.map((n, i) => <option key={n} value={i}>{n}</option>)}</select></span></label><button className="export-button" onClick={() => notify('Reporte de RR.HH. preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div>
+      <div className="t-header-tools"><label className="g-select"><CalendarDays size={16} /><span>Mes seleccionado<select value={m} onChange={(e) => setM(Number(e.target.value))}>{MONTH_FULL.map((n, i) => <option key={n} value={i}>{n}</option>)}</select></span></label><button className="export-button" onClick={() => { const n = exportView('RRHH'); notify(`Exportado a Excel: ${n} tablas de RR.HH.`); }}><Download size={15} /> Exportar</button></div>
     </section>
     <nav className="t-tabs" role="tablist">{(['Resumen mensual', 'Análisis por legajo'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>)}</nav>
     {tab === 'Resumen mensual' ? <Resumen unit={unit} m={m} /> : <Legajo unit={unit} m={m} />}
@@ -32,21 +35,22 @@ export function RRHHView({ unit, notify }: { unit: UnitFilter; notify: (m: strin
 
 function Resumen({ unit, m }: { unit: UnitFilter; m: number }) {
   const t = useMemo(() => hrTotals(unit, m), [unit, m]);
+  const drill = useDrill();
   const p = m > 0 ? hrTotals(unit, m - 1) : null;
   const rows = useMemo(() => areaRows(t), [t]);
   const tot = rows.reduce((a, r) => ({ activos: a.activos + r.activos, altas: a.altas + r.altas, bajas: a.bajas + r.bajas, remun: a.remun + r.remun, feriados: a.feriados + r.feriados, guardias: a.guardias + r.guardias, susCant: a.susCant + r.susCant, susDias: a.susDias + r.susDias, artCant: a.artCant + r.artCant, artDias: a.artDias + r.artDias, carpCant: a.carpCant + r.carpCant, carpDias: a.carpDias + r.carpDias }), { activos: 0, altas: 0, bajas: 0, remun: 0, feriados: 0, guardias: 0, susCant: 0, susDias: 0, artCant: 0, artDias: 0, carpCant: 0, carpDias: 0 });
   const series = useMemo(() => MONTH_LABELS.map((lb, i) => { const x = hrTotals(unit, i); return { m: lb, activos: x.activos, altas: x.altas, bajas: x.bajas, aus: +x.ausPct.toFixed(1), sus: x.susCant, art: x.artDias, carp: x.carpDias, susD: x.susDias, remun: x.remun }; }), [unit]);
   const dash = (v: number) => (v ? fmt(v) : '–');
   const tiles = [
-    { i: Users, l: 'Activos totales', v: fmt(t.activos), c: '#2563eb', d: <Delta cur={t.activos} prev={p?.activos ?? null} /> },
-    { i: UserPlus, l: 'Altas del mes', v: fmt(t.altas), c: '#22c55e', d: <Delta cur={t.altas} prev={p?.altas ?? null} /> },
-    { i: MinusCircle, l: 'Bajas del mes', v: fmt(t.bajas), c: '#ef4444', d: <Delta cur={t.bajas} prev={p?.bajas ?? null} goodUp={false} /> },
-    { i: UserCheck, l: 'Días de ausentismo', v: fmt(t.ausDias), c: '#f97316', d: <Delta cur={t.ausDias} prev={p?.ausDias ?? null} goodUp={false} /> },
-    { i: ShieldPlus, l: 'Días ART', v: fmt(t.artDias), c: '#8b5cf6', d: <Delta cur={t.artDias} prev={p?.artDias ?? null} goodUp={false} /> },
-    { i: HeartPulse, l: 'Días carpetas', v: fmt(t.carpDias), c: '#14b8a6', d: <Delta cur={t.carpDias} prev={p?.carpDias ?? null} goodUp={false} /> },
+    { i: Users, k: 'activos' as MetricKey, l: 'Activos totales', v: fmt(t.activos), c: '#2563eb', d: <Delta cur={t.activos} prev={p?.activos ?? null} /> },
+    { i: UserPlus, k: 'altas' as MetricKey, l: 'Altas del mes', v: fmt(t.altas), c: '#22c55e', d: <Delta cur={t.altas} prev={p?.altas ?? null} /> },
+    { i: MinusCircle, k: 'bajas' as MetricKey, l: 'Bajas del mes', v: fmt(t.bajas), c: '#ef4444', d: <Delta cur={t.bajas} prev={p?.bajas ?? null} goodUp={false} /> },
+    { i: UserCheck, k: 'ausDias' as MetricKey, l: 'Días de ausentismo', v: fmt(t.ausDias), c: '#f97316', d: <Delta cur={t.ausDias} prev={p?.ausDias ?? null} goodUp={false} /> },
+    { i: ShieldPlus, k: 'artDias' as MetricKey, l: 'Días ART', v: fmt(t.artDias), c: '#8b5cf6', d: <Delta cur={t.artDias} prev={p?.artDias ?? null} goodUp={false} /> },
+    { i: HeartPulse, k: 'carpDias' as MetricKey, l: 'Días carpetas', v: fmt(t.carpDias), c: '#14b8a6', d: <Delta cur={t.carpDias} prev={p?.carpDias ?? null} goodUp={false} /> },
   ];
   return <>
-    <section className="t-kpis rh-kpis">{tiles.map((x) => <div className="t-tile" key={x.l} style={{ ['--tone' as string]: x.c }}><div className="t-tile-top"><span className="t-tile-icon"><x.i size={19} /></span><span className="t-tile-label">{x.l}</span></div><div className="t-tile-value"><strong>{x.v}</strong></div>{x.d}</div>)}</section>
+    <section className="t-kpis rh-kpis">{tiles.map((x) => <div className="t-tile clickable" role="button" tabIndex={0} title="Ver detalle" onClick={() => drill.openMetric(x.k, { unit, month: m })} key={x.l} style={{ ['--tone' as string]: x.c }}><div className="t-tile-top"><span className="t-tile-icon"><x.i size={19} /></span><span className="t-tile-label">{x.l}</span></div><div className="t-tile-value"><strong>{x.v}</strong></div>{x.d}</div>)}</section>
     <Panel kicker="Consolidado" title="Resumen mensual por área" className="rh-table-panel"><div className="g-table-wrap"><table className="g-table rh-area"><thead><tr><th rowSpan={2}>Área</th><th rowSpan={2}>Activos</th><th rowSpan={2}>Altas</th><th rowSpan={2}>Bajas</th><th rowSpan={2}>Remuneración ($)</th><th rowSpan={2}>Feriados pagados</th><th rowSpan={2}>Guardias pagadas</th><th colSpan={2} className="c-orange">Suspensiones aplicadas</th><th colSpan={2} className="c-purple">ART</th><th colSpan={2} className="c-teal">Carpetas médicas</th></tr><tr><th className="c-orange">Cant.</th><th className="c-orange">Días</th><th className="c-purple">Cant.</th><th className="c-purple">Días</th><th className="c-teal">Cant.</th><th className="c-teal">Días</th></tr></thead>
       <tbody>{rows.map((r) => <tr key={r.area}><td><span className="sector-tag"><i style={{ background: AREA_COLOR[r.area] }} />{r.area}</span></td><td>{fmt(r.activos)}</td><td>{dash(r.altas)}</td><td>{dash(r.bajas)}</td><td>{moneyM(r.remun)}</td><td>{dash(r.feriados)}</td><td>{dash(r.guardias)}</td><td>{dash(r.susCant)}</td><td>{dash(r.susDias)}</td><td>{dash(r.artCant)}</td><td>{dash(r.artDias)}</td><td>{dash(r.carpCant)}</td><td>{dash(r.carpDias)}</td></tr>)}</tbody>
       <tfoot><tr><td>TOTAL GENERAL</td><td>{fmt(tot.activos)}</td><td>{dash(tot.altas)}</td><td>{dash(tot.bajas)}</td><td>{moneyM(tot.remun)}</td><td>{dash(tot.feriados)}</td><td>{dash(tot.guardias)}</td><td>{dash(tot.susCant)}</td><td>{dash(tot.susDias)}</td><td>{dash(tot.artCant)}</td><td>{dash(tot.artDias)}</td><td>{dash(tot.carpCant)}</td><td>{dash(tot.carpDias)}</td></tr></tfoot></table></div></Panel>

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { isTopModal } from '../g/esc';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, BusFront, CalendarClock, ChevronRight, CircleDollarSign, Clock3, Gauge, Hammer, Layers, PackageSearch, Route, User, Wrench, X } from 'lucide-react';
 import { BusDiagram } from './BusDiagram';
@@ -32,14 +33,15 @@ export function UnitSheet({ unit, initialOrder, initialComponent, onClose }: { u
   useEffect(() => { // si la OT elegida no tiene nada visible en la vista actual, cambiar de vista
     if (order && !order.components.some((c) => componentById[c].spots[view])) setView(view === 'corte' ? 'chasis' : 'corte');
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && (orderId ? setOrderId(null) : onClose()); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [orderId, onClose]);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && isTopModal(sheetRef.current) && (orderId ? setOrderId(null) : onClose()); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [orderId, onClose]);
 
   const bySystem = systems.map((sys) => ({ sys, cost: orders.reduce((s, o) => s + o.materials.filter((m) => componentById[lineComponent(o, m)].system === sys).reduce((a, m) => a + lineCost(m), 0), 0) })).sort((a, b) => b.cost - a.cost);
   const maxSys = Math.max(1, ...bySystem.map((s) => s.cost));
 
   const selectComponent = (id: string | null) => { setOrderId(null); setComponent(id); };
 
-  return <motion.div className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+  return <motion.div ref={sheetRef} data-modal="" className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
     <motion.section className="unit-sheet" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} transition={{ type: 'spring', damping: 26, stiffness: 240 }} onClick={(e) => e.stopPropagation()}>
       <header className="sheet-head">
         <div className="sheet-title">

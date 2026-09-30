@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -7,6 +7,9 @@ import { MONTH_FULL, MONTH_LABELS, UNIT_COLOR, UnitFilter } from '../data';
 import { AXIS, GRID, Panel, TOOLTIP_STYLE, fmt, pct } from '../ui';
 import { Bus } from '../taller';
 import { useOpenUnit } from '../openUnit';
+import { useDrill } from '../drill';
+import { exportView } from '../export';
+import { useTopEscape } from '../esc';
 import { DriverRow, Repair, RepEstado, Siniestro, driverEvents, driverHistory, fmtMoney, repairState, sinData } from '../siniestros';
 import { Bars, C, Donut, TD, Tile } from './shared';
 
@@ -18,8 +21,10 @@ const M = (v: number) => `$ ${fmt(v / 1e6, 1)} M`;
 
 type Detail = { kind: 'event'; s: Siniestro } | { kind: 'driver'; d: DriverRow['d'] } | null;
 
-export function SiniestrosView({ unit, notify }: { unit: UnitFilter; notify: (m: string) => void }) {
-  const [tab, setTab] = useState<Tab>('Resumen ejecutivo');
+export function SiniestrosView({ unit, notify, requestedTab }: { unit: UnitFilter; notify: (m: string) => void; requestedTab?: { tab: string; n: number } | null }) {
+  const [tab, setTab] = useState<Tab>(() => (requestedTab && (TABS as readonly string[]).includes(requestedTab.tab) ? requestedTab.tab as Tab : 'Resumen ejecutivo'));
+  useEffect(() => { if (requestedTab && (TABS as readonly string[]).includes(requestedTab.tab)) setTab(requestedTab.tab as Tab); }, [requestedTab]);
+  const drill = useDrill();
   const [m, setM] = useState(11);
   const [repF, setRepF] = useState<'Todas' | RepEstado>('Todas');
   const [claimF, setClaimF] = useState<'Todos' | 'Abiertos' | 'Cobrados'>('Todos');
@@ -36,12 +41,12 @@ export function SiniestrosView({ unit, notify }: { unit: UnitFilter; notify: (m:
   const nInc = d.incs.length; const nSin = d.events.length;
 
   const Tiles = () => <section className="t-kpis six">
-    <Tile icon={ShieldAlert} label="Siniestros" value={nSin} color={C.red}><TD cur={nSin} prev={prev ? prev.events.length : null} goodUp={false} /></Tile>
-    <Tile icon={UserRound} label="Resp. chofer" value={d.resp.Chofer} color={C.orange}><TD cur={d.resp.Chofer} prev={prev ? prev.resp.Chofer : null} goodUp={false} /></Tile>
-    <Tile icon={ShieldCheck} label="Sin responsabilidad" value={d.resp.Tercero} sub="terceros" color={C.blue}><TD cur={d.resp.Tercero} prev={prev ? prev.resp.Tercero : null} goodUp={false} /></Tile>
-    <Tile icon={HeartPulse} label="Lesionados" value={d.lesionados} color={C.purple}><TD cur={d.lesionados} prev={prev ? prev.lesionados : null} goodUp={false} /></Tile>
-    <Tile icon={Siren} label="Incidentes" value={nInc} color={C.amber}><TD cur={nInc} prev={prev ? prev.incs.length : null} goodUp={false} /></Tile>
-    <Tile icon={BusFront} label="Unidades afectadas" value={d.units} color={C.teal}><TD cur={d.units} prev={prev ? prev.units : null} goodUp={false} /></Tile>
+    <Tile icon={ShieldAlert} label="Siniestros" value={nSin} onClick={() => drill.openMetric('sin', { unit, month: m })} color={C.red}><TD cur={nSin} prev={prev ? prev.events.length : null} goodUp={false} /></Tile>
+    <Tile icon={UserRound} label="Resp. chofer" onClick={() => drill.openMetric('sinResp', { unit, month: m })} value={d.resp.Chofer} color={C.orange}><TD cur={d.resp.Chofer} prev={prev ? prev.resp.Chofer : null} goodUp={false} /></Tile>
+    <Tile icon={ShieldCheck} label="Sin responsabilidad" onClick={() => setTab('Seguimiento económico')} value={d.resp.Tercero} sub="terceros" color={C.blue}><TD cur={d.resp.Tercero} prev={prev ? prev.resp.Tercero : null} goodUp={false} /></Tile>
+    <Tile icon={HeartPulse} label="Lesionados" onClick={() => drill.openMetric('lesion', { unit, month: m })} value={d.lesionados} color={C.purple}><TD cur={d.lesionados} prev={prev ? prev.lesionados : null} goodUp={false} /></Tile>
+    <Tile icon={Siren} label="Incidentes" onClick={() => drill.openMetric('incid', { unit, month: m })} value={nInc} color={C.amber}><TD cur={nInc} prev={prev ? prev.incs.length : null} goodUp={false} /></Tile>
+    <Tile icon={BusFront} label="Unidades afectadas" onClick={() => setTab('Reparación de unidades')} value={d.units} color={C.teal}><TD cur={d.units} prev={prev ? prev.units : null} goodUp={false} /></Tile>
   </section>;
 
   const Responsabilidad = () => <Panel kicker="Siniestros del período" title="Responsabilidad"><Donut center={String(nSin)} sub="TOTAL" data={[{ name: 'Chofer', value: d.resp.Chofer, color: C.red }, { name: 'Tercero', value: d.resp.Tercero, color: C.blue }, { name: 'En análisis', value: d.resp['En análisis'], color: C.amber }]} /></Panel>;
@@ -124,7 +129,7 @@ export function SiniestrosView({ unit, notify }: { unit: UnitFilter; notify: (m:
   return <div className="taller siniestros">
     <section className="t-header">
       <div className="t-title"><span className="t-title-icon" style={{ background: 'linear-gradient(135deg,#ef4444,#f97316)' }}><ShieldAlert size={24} /></span><div><span className="section-kicker">Siniestros y Seguridad</span><h2>Siniestros e Incidentes</h2><p><MapPin size={12} /> {unitsTxt} · conductores, unidades y reparaciones</p></div></div>
-      <div className="t-header-tools"><label className="g-select"><CalendarDays size={16} /><span>Mes seleccionado<select value={m} onChange={(e) => setM(Number(e.target.value))}>{MONTH_FULL.map((n, i) => <option key={n} value={i}>{n}</option>)}</select></span></label><button className="export-button" onClick={() => notify('Reporte integral de siniestros preparado para exportar')}><Download size={15} /> Exportar reporte</button></div>
+      <div className="t-header-tools"><label className="g-select"><CalendarDays size={16} /><span>Mes seleccionado<select value={m} onChange={(e) => setM(Number(e.target.value))}>{MONTH_FULL.map((n, i) => <option key={n} value={i}>{n}</option>)}</select></span></label><button className="export-button" onClick={() => { const n = exportView('Siniestros y Seguridad'); notify(`Exportado a Excel: ${n} tablas de ${tab}`); }}><Download size={15} /> Exportar reporte</button></div>
     </section>
     <nav className="t-tabs" role="tablist">{TABS.map((t) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>)}</nav>
 
@@ -139,9 +144,8 @@ export function SiniestrosView({ unit, notify }: { unit: UnitFilter; notify: (m:
   </div>;
 }
 
-function useEsc(f: () => void) { React.useEffect(() => { const h = (e: KeyboardEvent) => e.key === 'Escape' && f(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [f]); }
 function DetailModal({ detail, m, onClose, onBus, onDriver }: { detail: NonNullable<Detail>; m: number; onClose: () => void; onBus: (b: Bus, s?: Siniestro) => void; onDriver: (d: DriverRow['d']) => void }) {
-  useEsc(onClose);
+  const escRef = React.useRef<HTMLDivElement>(null); useTopEscape(escRef, onClose);
   const ev = detail.kind === 'driver' ? driverEvents(detail.d) : null;
   const per = useMemo(() => (ev ? MONTH_LABELS.map((lb, i) => ({ m: lb, siniestros: ev.sin.filter((s) => s.m === i).length, incidentes: ev.inc.filter((x) => x.m === i).length })) : []), [ev]);
   const content = detail.kind === 'event' ? (() => {
@@ -164,7 +168,7 @@ function DetailModal({ detail, m, onClose, onBus, onDriver }: { detail: NonNulla
       <h4 className="sn-sub">Unidades involucradas</h4><div className="sn-chips inline">{bs.length ? bs.map((b) => <button key={b.id} onClick={() => onBus(b)}>Interno {b.interno}</button>) : <span className="sn-hint">Sin siniestros registrados.</span>}</div>
       <h4 className="sn-sub">Últimos siniestros</h4><div className="g-table-wrap"><table className="g-table clickable"><tbody>{[...e.sin].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5).map((s) => <tr key={s.id} onClick={() => onBus(s.bus, s)}><td>{s.fecha}</td><td><b>{s.bus.interno}</b></td><td>{s.damage}</td><td>{s.resp}</td></tr>)}</tbody></table></div></>;
   })();
-  return createPortal(<motion.div className="modal-backdrop bus-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-    <motion.div className="sn-modal" initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">{content}</motion.div>
+  return createPortal(<motion.div ref={escRef} data-modal="" className="modal-backdrop bus-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
+    <motion.div className="sn-modal" initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">{content}</motion.div>
   </motion.div>, document.body);
 }

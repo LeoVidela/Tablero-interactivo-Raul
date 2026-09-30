@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, BusFront, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, Download, Droplets, Fuel, Gauge, Hammer, MapPin, Repeat, Route, ShieldCheck, ShoppingCart, Timer, Users, Wallet, Wrench } from 'lucide-react';
 import { MONTH_FULL, MONTH_LABELS, UnitFilter, aggregate } from '../data';
@@ -6,18 +6,23 @@ import { AXIS, GRID, Panel, TOOLTIP_STYLE, fmt, money, moneyM, pct } from '../ui
 import { Bus, LABOR_RATE, OTEstado, SECTOR_COLOR, SECTORS, mechanicsOf, tallerData, topParts, unitConsumption } from '../taller';
 import { componentById } from '../../data/catalog';
 import { useOpenUnit } from '../openUnit';
+import { useDrill } from '../drill';
+import type { MetricKey } from '../metrics';
+import { StockTab } from './Stock';
 import { MantTab, ProdBlock } from './Mantenimiento';
 import { production } from '../mant';
 
-const TABS = ['Taller en vivo', 'Resumen general', 'Mantenimiento de flota', 'Preventivo', 'Correctivo', 'Reincidencias', 'Productividad', 'Análisis de fallas', 'Repuestos y gastos', 'Combustible', 'Kilómetros', 'Personal taller'] as const;
+const TABS = ['Taller en vivo', 'Resumen general', 'Mantenimiento de flota', 'Preventivo', 'Correctivo', 'Reincidencias', 'Productividad', 'Análisis de fallas', 'Repuestos y gastos', 'Stock de pañol', 'Combustible', 'Kilómetros', 'Personal taller'] as const;
 type Tab = (typeof TABS)[number];
 import { C, Donut, GaugeHealth, Bars, Tile, TD, Tip } from './shared';
 const OT_TONE: Record<OTEstado, string> = { 'En proceso': 'warn', 'Espera repuesto': 'bad', Pendiente: 'warn', Cerrada: 'good' };
 
 
-export function TallerView({ unit, notify, live }: { unit: UnitFilter; notify: (m: string) => void; live: React.ReactNode }) {
-  const [tab, setTab] = useState<Tab>('Taller en vivo');
+export function TallerView({ unit, notify, live, requestedTab }: { unit: UnitFilter; notify: (m: string) => void; live: React.ReactNode; requestedTab?: { tab: string; n: number } | null }) {
+  const [tab, setTab] = useState<Tab>(() => (requestedTab && (TABS as readonly string[]).includes(requestedTab.tab) ? requestedTab.tab as Tab : 'Taller en vivo'));
+  useEffect(() => { if (requestedTab && (TABS as readonly string[]).includes(requestedTab.tab)) setTab(requestedTab.tab as Tab); }, [requestedTab]);
   const openUnit = useOpenUnit();
+  const drill = useDrill();
   const [m, setM] = useState(11);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const d = useMemo(() => tallerData(unit, m), [unit, m]);
@@ -29,27 +34,29 @@ export function TallerView({ unit, notify, live }: { unit: UnitFilter; notify: (
   const pMonth = MONTH_FULL[m];
 
   // ---------- bloques ----------
+  const TILE_METRIC: Record<string, MetricKey | 'flota' | 'prev'> = { total: 'flota', oper: 'oper', out: 'out', open: 'otOpen', closed: 'otClosed', pdone: 'prevDone', ppend: 'prevPend', reinc: 'reinc', itc: 'prev', time: 'repTime', pers: 'personal', hs: 'horas', hpp: 'horas', itcv: 'prev', pcum: 'prevDone' };
+  const tileClick = (key: string) => () => { const t = TILE_METRIC[key]; if (t === 'flota') drill.go('Flota', { unit }); else if (t === 'prev') setTab('Preventivo'); else drill.openMetric(t, { unit, month: m }); };
   const Kpis = ({ keys }: { keys: string[] }) => {
     const all: Record<string, React.ReactNode> = {
-      total: <Tile key="total" icon={BusFront} label="Flota total" value={a.total} sub="unidades" color={C.blue} />,
-      oper: <Tile key="oper" icon={CheckCircle2} label="Operativas" value={a.oper} sub={pct((a.oper / a.total) * 100)} color={C.green}><TD cur={a.oper} prev={p ? p.oper : null} /></Tile>,
-      out: <Tile key="out" icon={Wrench} label="Fuera de servicio" value={a.out} sub={pct((a.out / a.total) * 100)} color={C.red}><TD cur={a.out} prev={p ? p.out : null} goodUp={false} /></Tile>,
-      open: <Tile key="open" icon={ClipboardList} label="OT abiertas" value={a.otOpen} color={C.orange}><TD cur={a.otOpen} prev={p ? p.otOpen : null} goodUp={false} /></Tile>,
-      closed: <Tile key="closed" icon={CheckCircle2} label="OT cerradas (mes)" value={a.otClosed} color={C.purple}><TD cur={a.otClosed} prev={p ? p.otClosed : null} /></Tile>,
-      pdone: <Tile key="pdone" icon={ShieldCheck} label="Preventivos ejecutados" value={a.prevDone} sub={pct(prevDonePct)} color={C.teal}><TD cur={a.prevDone} prev={p ? p.prevDone : null} /></Tile>,
-      ppend: <Tile key="ppend" icon={Timer} label="Preventivos pendientes" value={a.prevPend} sub={pct(100 - prevDonePct)} color={C.amber}><TD cur={a.prevPend} prev={p ? p.prevPend : null} goodUp={false} /></Tile>,
-      reinc: <Tile key="reinc" icon={Repeat} label="Reincidencias" value={a.reinc} color={C.red}><TD cur={a.reinc} prev={p ? p.reinc : null} goodUp={false} /></Tile>,
-      itc: <Tile key="itc" icon={CalendarDays} label="ITC por vencer" value={a.itc30} color={C.blue}><TD cur={a.itc30} prev={p ? p.itc30 : null} goodUp={false} /></Tile>,
-      time: <Tile key="time" icon={Timer} label="Tiempo prom. reparación" value={`${fmt(a.repTime, 1)} h`} color={C.cyan}><TD cur={a.repTime} prev={p ? p.repTime : null} goodUp={false} mode="pct" /></Tile>,
-      pers: <Tile key="pers" icon={Users} label="Personal de taller" value={a.personal} color={C.blue}><TD cur={a.personal} prev={p ? p.personal : null} /></Tile>,
-      hs: <Tile key="hs" icon={Timer} label="Horas taller totales" value={fmt(a.horas)} sub="hs" color={C.orange}><TD cur={a.horas} prev={p ? p.horas : null} mode="pct" /></Tile>,
-      hpp: <Tile key="hpp" icon={Gauge} label="Horas prom. por persona" value={fmt(a.horas / Math.max(1, a.personal), 1)} sub="hs" color={C.teal} />,
-      itcv: <Tile key="itcv" icon={AlertTriangle} label="ITC vencidos" value={a.itcVenc} color={C.red}><TD cur={a.itcVenc} prev={p ? p.itcVenc : null} goodUp={false} /></Tile>,
-      pcum: <Tile key="pcum" icon={ShieldCheck} label="Cumplimiento preventivos" value={pct(prevDonePct)} color={C.green} />,
+      total: <Tile key="total" onClick={tileClick('total')} icon={BusFront} label="Flota total" value={a.total} sub="unidades" color={C.blue} />,
+      oper: <Tile key="oper" onClick={tileClick('oper')} icon={CheckCircle2} label="Operativas" value={a.oper} sub={pct((a.oper / a.total) * 100)} color={C.green}><TD cur={a.oper} prev={p ? p.oper : null} /></Tile>,
+      out: <Tile key="out" onClick={tileClick('out')} icon={Wrench} label="Fuera de servicio" value={a.out} sub={pct((a.out / a.total) * 100)} color={C.red}><TD cur={a.out} prev={p ? p.out : null} goodUp={false} /></Tile>,
+      open: <Tile key="open" onClick={tileClick('open')} icon={ClipboardList} label="OT abiertas" value={a.otOpen} color={C.orange}><TD cur={a.otOpen} prev={p ? p.otOpen : null} goodUp={false} /></Tile>,
+      closed: <Tile key="closed" onClick={tileClick('closed')} icon={CheckCircle2} label="OT cerradas (mes)" value={a.otClosed} color={C.purple}><TD cur={a.otClosed} prev={p ? p.otClosed : null} /></Tile>,
+      pdone: <Tile key="pdone" onClick={tileClick('pdone')} icon={ShieldCheck} label="Preventivos ejecutados" value={a.prevDone} sub={pct(prevDonePct)} color={C.teal}><TD cur={a.prevDone} prev={p ? p.prevDone : null} /></Tile>,
+      ppend: <Tile key="ppend" onClick={tileClick('ppend')} icon={Timer} label="Preventivos pendientes" value={a.prevPend} sub={pct(100 - prevDonePct)} color={C.amber}><TD cur={a.prevPend} prev={p ? p.prevPend : null} goodUp={false} /></Tile>,
+      reinc: <Tile key="reinc" onClick={tileClick('reinc')} icon={Repeat} label="Reincidencias" value={a.reinc} color={C.red}><TD cur={a.reinc} prev={p ? p.reinc : null} goodUp={false} /></Tile>,
+      itc: <Tile key="itc" onClick={tileClick('itc')} icon={CalendarDays} label="ITC por vencer" value={a.itc30} color={C.blue}><TD cur={a.itc30} prev={p ? p.itc30 : null} goodUp={false} /></Tile>,
+      time: <Tile key="time" onClick={tileClick('time')} icon={Timer} label="Tiempo prom. reparación" value={`${fmt(a.repTime, 1)} h`} color={C.cyan}><TD cur={a.repTime} prev={p ? p.repTime : null} goodUp={false} mode="pct" /></Tile>,
+      pers: <Tile key="pers" onClick={tileClick('pers')} icon={Users} label="Personal de taller" value={a.personal} color={C.blue}><TD cur={a.personal} prev={p ? p.personal : null} /></Tile>,
+      hs: <Tile key="hs" onClick={tileClick('hs')} icon={Timer} label="Horas taller totales" value={fmt(a.horas)} sub="hs" color={C.orange}><TD cur={a.horas} prev={p ? p.horas : null} mode="pct" /></Tile>,
+      hpp: <Tile key="hpp" onClick={tileClick('hpp')} icon={Gauge} label="Horas prom. por persona" value={fmt(a.horas / Math.max(1, a.personal), 1)} sub="hs" color={C.teal} />,
+      itcv: <Tile key="itcv" onClick={tileClick('itcv')} icon={AlertTriangle} label="ITC vencidos" value={a.itcVenc} color={C.red}><TD cur={a.itcVenc} prev={p ? p.itcVenc : null} goodUp={false} /></Tile>,
+      pcum: <Tile key="pcum" onClick={tileClick('pcum')} icon={ShieldCheck} label="Cumplimiento preventivos" value={pct(prevDonePct)} color={C.green} />,
     };
     return <section className="t-kpis">{keys.map((k) => all[k])}</section>;
   };
-  const EstadoDonut = () => <Panel kicker="Flota" title="Estado general de la flota"><Donut center={String(a.total)} sub="TOTAL" data={[{ name: 'Operativas', value: a.oper, color: C.green }, { name: 'En reparación', value: a.enRep, color: C.red }, { name: 'Esperando repuestos', value: a.espRep, color: C.amber }, { name: 'Fuera de servicio', value: a.fuera, color: C.gray }]} /></Panel>;
+  const EstadoDonut = () => <Panel kicker="Flota" title="Estado general de la flota" right={<button className="text-button" onClick={() => drill.go('Flota', { unit })}>Ver coches <ChevronRight size={14} /></button>}><Donut center={String(a.total)} sub="TOTAL" data={[{ name: 'Operativas', value: a.oper, color: C.green }, { name: 'En reparación', value: a.enRep, color: C.red }, { name: 'Esperando repuestos', value: a.espRep, color: C.amber }, { name: 'Fuera de servicio', value: a.fuera, color: C.gray }]} /></Panel>;
   const EvolOT = () => <Panel kicker="12 meses" title="Evolución de OT"><div className="g-chart-box short"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={series} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}><CartesianGrid vertical={false} stroke={GRID} /><XAxis dataKey="m" axisLine={false} tickLine={false} tick={AXIS} /><YAxis yAxisId="l" axisLine={false} tickLine={false} tick={AXIS} /><YAxis yAxisId="r" orientation="right" axisLine={false} tickLine={false} tick={AXIS} />{Tip}<Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--ax)' }} /><Bar yAxisId="l" dataKey="closed" name="OT cerradas" fill={C.blue} radius={[4, 4, 0, 0]} /><Line yAxisId="r" dataKey="open" name="OT abiertas" stroke={C.orange} strokeWidth={2.5} dot={{ r: 3, fill: 'var(--dot-bg)', stroke: C.orange, strokeWidth: 2 }} /></ComposedChart></ResponsiveContainer></div></Panel>;
   const CumplPrev = () => <Panel kicker="12 meses" title="Cumplimiento de preventivos"><div className="g-chart-box short"><ResponsiveContainer width="100%" height="100%"><LineChart data={series} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}><CartesianGrid vertical={false} stroke={GRID} /><XAxis dataKey="m" axisLine={false} tickLine={false} tick={AXIS} /><YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={AXIS} tickFormatter={(v) => `${v}%`} />{Tip}<Line dataKey="prev" name="Cumplimiento" stroke={C.green} strokeWidth={2.5} dot={{ r: 3, fill: 'var(--dot-bg)', stroke: C.green, strokeWidth: 2 }} /></LineChart></ResponsiveContainer></div></Panel>;
   const ITC = () => <Panel kicker="Vencimientos" title="ITC / vencimientos"><Donut center={String(a.itcVenc + a.itc30 + a.itc60)} sub="TOTAL" data={[{ name: 'Vencidos', value: a.itcVenc, color: C.red }, { name: 'Por vencer (30 días)', value: a.itc30, color: C.orange }, { name: 'Por vencer (31-60 días)', value: a.itc60, color: C.amber }, { name: 'OK', value: Math.max(0, a.total - a.itcVenc - a.itc30 - a.itc60), color: C.green }]} /></Panel>;
@@ -71,13 +78,13 @@ export function TallerView({ unit, notify, live }: { unit: UnitFilter; notify: (
   const parts = useMemo(() => topParts(d), [d]);
   const spark = (key: 'cost' | 'kmpl' | 'repKm' | 'mantKm' | 'prev', color: string) => <div className="t-spark"><ResponsiveContainer width="100%" height="100%"><LineChart data={series}><Line dataKey={key} stroke={color} strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div>;
   const GastoTiles = () => <section className="t-kpis money">
-    <Tile icon={ShoppingCart} label="Gasto total repuestos" value={money(gasto.repuestos, 0)} color={C.green}><TD cur={gasto.repuestos} prev={pg ? pg.repuestos : null} goodUp={false} mode="pct" /></Tile>
-    <Tile icon={Wrench} label="Gasto total mantenimiento" value={money(gasto.gasto, 0)} color={C.blue}><TD cur={gasto.gasto} prev={pg ? pg.gasto : null} goodUp={false} mode="pct" /></Tile>
-    <Tile icon={Route} label="Km recorridos" value={`${fmt(a.kmExec)} km`} color={C.purple}><TD cur={a.kmExec} prev={p ? p.kmExec : null} mode="pct" /></Tile>
-    <Tile icon={Fuel} label="Combustible consumido" value={`${fmt(a.lts)} Lts`} color={C.orange}><TD cur={a.lts} prev={p ? p.lts : null} goodUp={false} mode="pct" /></Tile>
-    <Tile icon={Users} label="N° personal taller" value={a.personal} color={C.blue}><TD cur={a.personal} prev={p ? p.personal : null} /></Tile>
-    <Tile icon={Timer} label="Horas taller totales" value={`${fmt(a.horas)} hs`} color={C.orange}><TD cur={a.horas} prev={p ? p.horas : null} mode="pct" /></Tile>
-    <Tile icon={Wallet} label="Costo mantenimiento / km" value={money(gasto.gasto / a.kmExec)} color={C.green}><TD cur={gasto.gasto / a.kmExec} prev={pg && p ? pg.gasto / p.kmExec : null} goodUp={false} mode="pct" /></Tile>
+    <Tile icon={ShoppingCart} label="Gasto total repuestos" onClick={() => drill.openMetric('gastoRep', { unit, month: m })} value={money(gasto.repuestos, 0)} color={C.green}><TD cur={gasto.repuestos} prev={pg ? pg.repuestos : null} goodUp={false} mode="pct" /></Tile>
+    <Tile icon={Wrench} label="Gasto total mantenimiento" onClick={() => drill.openMetric('gastoTot', { unit, month: m })} value={money(gasto.gasto, 0)} color={C.blue}><TD cur={gasto.gasto} prev={pg ? pg.gasto : null} goodUp={false} mode="pct" /></Tile>
+    <Tile icon={Route} label="Km recorridos" onClick={() => drill.openMetric('kmExec', { unit, month: m })} value={`${fmt(a.kmExec)} km`} color={C.purple}><TD cur={a.kmExec} prev={p ? p.kmExec : null} mode="pct" /></Tile>
+    <Tile icon={Fuel} label="Combustible consumido" onClick={() => drill.openMetric('lts', { unit, month: m })} value={`${fmt(a.lts)} Lts`} color={C.orange}><TD cur={a.lts} prev={p ? p.lts : null} goodUp={false} mode="pct" /></Tile>
+    <Tile icon={Users} label="N° personal taller" onClick={() => drill.openMetric('personal', { unit, month: m })} value={a.personal} color={C.blue}><TD cur={a.personal} prev={p ? p.personal : null} /></Tile>
+    <Tile icon={Timer} label="Horas taller totales" onClick={() => drill.openMetric('horas', { unit, month: m })} value={`${fmt(a.horas)} hs`} color={C.orange}><TD cur={a.horas} prev={p ? p.horas : null} mode="pct" /></Tile>
+    <Tile icon={Wallet} label="Costo mantenimiento / km" onClick={() => drill.openMetric('costoMantKm', { unit, month: m })} value={money(gasto.gasto / a.kmExec)} color={C.green}><TD cur={gasto.gasto / a.kmExec} prev={pg && p ? pg.gasto / p.kmExec : null} goodUp={false} mode="pct" /></Tile>
   </section>;
   const GastoEvol = ({ which }: { which: 'gastos' | 'km' | 'lts' }) => <Panel kicker="12 meses" title={which === 'gastos' ? 'Evolución de gastos' : which === 'km' ? 'Kilómetros recorridos' : 'Combustible consumido'}><div className="g-chart-box short"><ResponsiveContainer width="100%" height="100%">{which === 'gastos'
     ? <LineChart data={series} margin={{ top: 8, right: 8, left: -6, bottom: 0 }}><CartesianGrid vertical={false} stroke={GRID} /><XAxis dataKey="m" axisLine={false} tickLine={false} tick={AXIS} /><YAxis axisLine={false} tickLine={false} tick={AXIS} tickFormatter={(v) => `$ ${fmt(v / 1e6, 0)} M`} /><Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, n: string) => [moneyM(v), n]} /><Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--ax)' }} /><Line dataKey="rep" name="Repuestos" stroke={C.green} strokeWidth={2.5} dot={false} /><Line dataKey="mant" name="Mantenimiento" stroke={C.blue} strokeWidth={2.5} dot={false} /><Line dataKey="comb" name="Combustible" stroke={C.orange} strokeWidth={2.5} dot={false} /></LineChart>
@@ -109,6 +116,7 @@ export function TallerView({ unit, notify, live }: { unit: UnitFilter; notify: (
     {tab === 'Productividad' && <>{Kpis({ keys: ['closed', 'time', 'pers', 'hs', 'hpp'] })}<section className="t-grid-3 wide">{EvolOT()}{TiempoRep()}{Personal()}</section>{Mecanicos()}</>}
     {tab === 'Análisis de fallas' && <>{Kpis({ keys: ['reinc', 'open', 'time'] })}<section className="t-grid-3 wide">{Fallas()}{CostoSector()}{Salud()}</section>{Reinc({ all: true })}</>}
     {tab === 'Repuestos y gastos' && <>{GastoTiles()}<section className="t-grid-3 wide">{GastoEvol({ which: "gastos" })}{GastoEvol({ which: "km" })}{GastoEvol({ which: "lts" })}</section><section className="t-grid-3 mix">{Repuestos()}{ResumenGastos()}{Personal()}</section><section className="t-grid-2">{Consumos()}{Claves()}</section></>}
+    {tab === 'Stock de pañol' && <StockTab unit={unit} notify={notify} />}
     {tab === 'Combustible' && <>{GastoTiles()}<section className="t-grid-3 wide">{GastoEvol({ which: "lts" })}{Combustible()}{Claves()}</section>{Consumos({ n: 10 })}</>}
     {tab === 'Kilómetros' && <>{GastoTiles()}<section className="t-grid-3 wide">{GastoEvol({ which: "km" })}{Kms()}{Claves()}</section>{Consumos({ n: 10 })}</>}
     {tab === 'Personal taller' && <>{Kpis({ keys: ['pers', 'hs', 'hpp', 'closed', 'time'] })}<section className="t-grid-3 wide">{Personal()}{EvolOT()}{TiempoRep()}</section><ProdBlock prod={production(unit, m)} unit={unit} pMonth={pMonth} notify={notify} /></>}

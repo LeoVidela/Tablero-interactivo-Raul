@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarCheck2, CalendarClock, CheckCircle2, ClipboardCh
 import { MONTH_FULL, UNIT_COLOR, UnitFilter } from '../data';
 import { AXIS, GRID, Panel, TOOLTIP_STYLE, fmt, pct } from '../ui';
 import { useOpenUnit } from '../openUnit';
+import { useDrill } from '../drill';
 import { PendEstado, PendRow, ProdRow, correctivos, pendientes, plan, planEvolution, production } from '../mant';
 import { C, Donut, TD, Tile } from './shared';
 
@@ -24,6 +25,7 @@ export function useMant(unit: UnitFilter, m: number) {
 
 export function MantTab({ unit, m, setM, notify }: { unit: UnitFilter; m: number; setM: (m: number) => void; notify: (s: string) => void }) {
   const openUnit = useOpenUnit();
+  const drill = useDrill();
   const { p, pp, evo, pend, prod, corr } = useMant(unit, m);
   const [pf, setPf] = useState<'Todos' | 'Preventivo' | 'Service' | '+30'>('Todos');
   const [more, setMore] = useState<Record<string, boolean>>({});
@@ -37,12 +39,12 @@ export function MantTab({ unit, m, setM, notify }: { unit: UnitFilter; m: number
 
   return <>
     <section className="t-kpis">
-      <Tile icon={CalendarClock} label="Preventivos program." value={p.prevProg} color={C.blue}><TD cur={p.prevProg} prev={pp ? pp.prevProg : null} /></Tile>
-      <Tile icon={CheckCircle2} label="Preventivos cumplidos" value={p.prevDone} sub={pct(rate(p.prevDone, p.prevProg), 0)} color={C.green}><TD cur={p.prevDone} prev={pp ? pp.prevDone : null} /></Tile>
-      <Tile icon={Timer} label="Preventivos pend." value={p.prevPend} color={C.red}><TD cur={p.prevPend} prev={pp ? pp.prevPend : null} goodUp={false} /></Tile>
-      <Tile icon={CalendarClock} label="Services program." value={p.servProg} color={C.purple}><TD cur={p.servProg} prev={pp ? pp.servProg : null} /></Tile>
-      <Tile icon={CheckCircle2} label="Services cumplidos" value={p.servDone} sub={pct(rate(p.servDone, p.servProg), 0)} color={C.teal}><TD cur={p.servDone} prev={pp ? pp.servDone : null} /></Tile>
-      <Tile icon={Timer} label="Services pend." value={p.servPend} color={C.orange}><TD cur={p.servPend} prev={pp ? pp.servPend : null} goodUp={false} /></Tile>
+      <Tile icon={CalendarClock} label="Preventivos program." onClick={() => drill.openMetric('prevDone', { unit, month: m })} value={p.prevProg} color={C.blue}><TD cur={p.prevProg} prev={pp ? pp.prevProg : null} /></Tile>
+      <Tile icon={CheckCircle2} label="Preventivos cumplidos" onClick={() => drill.openMetric('prevDone', { unit, month: m })} value={p.prevDone} sub={pct(rate(p.prevDone, p.prevProg), 0)} color={C.green}><TD cur={p.prevDone} prev={pp ? pp.prevDone : null} /></Tile>
+      <Tile icon={Timer} label="Preventivos pend." onClick={() => setPf('Preventivo')} value={p.prevPend} color={C.red}><TD cur={p.prevPend} prev={pp ? pp.prevPend : null} goodUp={false} /></Tile>
+      <Tile icon={CalendarClock} label="Services program." onClick={() => drill.openMetric('prevDone', { unit, month: m })} value={p.servProg} color={C.purple}><TD cur={p.servProg} prev={pp ? pp.servProg : null} /></Tile>
+      <Tile icon={CheckCircle2} label="Services cumplidos" onClick={() => drill.openMetric('prevDone', { unit, month: m })} value={p.servDone} sub={pct(rate(p.servDone, p.servProg), 0)} color={C.teal}><TD cur={p.servDone} prev={pp ? pp.servDone : null} /></Tile>
+      <Tile icon={Timer} label="Services pend." onClick={() => setPf('Service')} value={p.servPend} color={C.orange}><TD cur={p.servPend} prev={pp ? pp.servPend : null} goodUp={false} /></Tile>
     </section>
 
     <section className="mt-grid">
@@ -76,6 +78,7 @@ export function MantTab({ unit, m, setM, notify }: { unit: UnitFilter; m: number
 }
 
 export function ProdBlock({ prod, unit, pMonth, notify }: { prod: ProdRow[]; unit: UnitFilter; pMonth: string; notify: (s: string) => void }) {
+  const drill = useDrill();
   const [all, setAll] = useState(false);
   const [sector, setSector] = useState<string>('Todos');
   const tot = prod.reduce((t, r) => ({ prev: t.prev + r.prev, serv: t.serv + r.serv, corr: t.corr + r.corr }), { prev: 0, serv: 0, corr: 0 });
@@ -84,10 +87,10 @@ export function ProdBlock({ prod, unit, pMonth, notify }: { prod: ProdRow[]; uni
   const max = Math.max(...prod.map((r) => r.total), 1);
   return <>
     <section className="t-kpis">
-      <Tile icon={Users} label="Personal de taller" value={prod.length} sub="mecánicos" color={C.blue} />
-      <Tile icon={ClipboardCheck} label="Preventivos realiz." value={tot.prev} color={C.green} />
-      <Tile icon={CalendarCheck2} label="Services realiz." value={tot.serv} color={C.purple} />
-      <Tile icon={Hammer} label="Correctivos realiz." value={fmt(tot.corr)} color={C.orange} />
+      <Tile icon={Users} label="Personal de taller" onClick={() => drill.openMetric('personal', { unit })} value={prod.length} sub="mecánicos" color={C.blue} />
+      <Tile icon={ClipboardCheck} label="Preventivos realiz." onClick={() => drill.openMetric('prevDone', { unit })} value={tot.prev} color={C.green} />
+      <Tile icon={CalendarCheck2} label="Services realiz." onClick={() => drill.openMetric('prevDone', { unit })} value={tot.serv} color={C.purple} />
+      <Tile icon={Hammer} label="Correctivos realiz." onClick={() => drill.openMetric('otClosed', { unit })} value={fmt(tot.corr)} color={C.orange} />
     </section>
     <section className="mt-grid two">
       <Panel kicker="Ordenado por total de intervenciones" title={`Producción individual del taller · ${pMonth}`} right={<div className="sn-chips inline">{['Todos', 'Mecánica', 'Electricidad', 'Carrocería'].map((x) => <button key={x} className={sector === x ? 'active' : ''} onClick={() => setSector(x)}>{x}</button>)}</div>}>
