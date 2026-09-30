@@ -35,3 +35,9 @@ Los datos se encuentran en `src/main.tsx` como dataset de demostración. En la s
 - **RR.HH.**: resumen mensual por área + análisis individual por legajo.
 - **Tráfico**: acceso a la flota en tiempo real de Micronauta (Comodoro y Córdoba). `public/micronauta-invitado.user.js` (Tampermonkey) acciona "Entrar como invitado" automáticamente.
 - Datos demo determinísticos en `src/data.ts`, `src/taller.ts` y `src/rrhh.ts`.
+
+## Novedades: Siniestros y Mantenimiento de flota (30/09/2026)
+- **Seguridad → Siniestros e Incidentes** (`src/siniestros.ts`, `src/views/Siniestros.tsx`): resumen ejecutivo, reincidencia de conductores y unidades, seguimiento de reparaciones (pendientes del mes / meses anteriores con antigüedad, en reparación, reparadas), seguimiento económico (seguro, gestión interna, terceros, reclamos) e histórico de 12 meses por conductor. Respeta el selector de unidad; conductores y reclamos abren su detalle y los internos abren la ficha del coche.
+- **Taller → Mantenimiento de flota** (`src/mant.ts`, `src/views/Mantenimiento.tsx`): plan de preventivos y services, pendientes y vencidos +30 días, evolución 6 meses, pendientes acumulados, correctivos realizados y producción individual (también en *Personal taller*).
+- La ficha del coche ahora incluye también los siniestros del coche en su historial.
+- **Versión HTML de un solo archivo**: `npm run build:html` → `dist-html/index.html` (se abre con doble clic, sin servidor ni internet).

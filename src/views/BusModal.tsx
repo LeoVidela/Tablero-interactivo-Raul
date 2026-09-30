@@ -5,6 +5,7 @@ import { CheckCircle2, Clock3, Download, Gauge, Hammer, MapPin, Package, User, W
 import { UNIT_COLOR } from '../data';
 import { ANCHOR_LABEL, AnchorKey, Bus, OT, OTEstado, SECTOR_COLOR, busHistory } from '../taller';
 import { fmt, money } from '../ui';
+import { allSiniestros, siniestroOT } from '../siniestros';
 
 // ---------- geometría del bus (vista lateral, frente hacia la derecha) ----------
 type Shape = { t: 'r'; x: number; y: number; w: number; h: number } | { t: 'c'; r: number };
@@ -101,7 +102,11 @@ const ESTADO_TONE: Record<OTEstado, string> = { 'En proceso': 'warn', 'Espera re
 const BUS_TONE: Record<string, string> = { Operativa: 'good', 'En reparación': 'warn', 'Esperando repuestos': 'warn', 'Fuera de servicio': 'bad' };
 
 export function BusModal({ bus, ot, onClose, notify }: { bus: Bus; ot?: OT; onClose: () => void; notify: (m: string) => void }) {
-  const history = useMemo(() => busHistory(bus), [bus]);
+  const history = useMemo(() => {
+    const key = (o: OT) => o.abierta.split('/').reverse().join('');
+    const sin = allSiniestros().filter((x) => x.bus.id === bus.id).map((x) => siniestroOT(x, 11));
+    return [...busHistory(bus), ...sin].sort((a, b) => key(b).localeCompare(key(a)));
+  }, [bus]);
   const all = useMemo(() => (ot && !history.some((h) => h.id === ot.id) ? [ot, ...history] : history), [ot, history]);
   const [active, setActive] = useState<OT>(ot ?? history[0]);
   const [zone, setZone] = useState<AnchorKey | null>(null);

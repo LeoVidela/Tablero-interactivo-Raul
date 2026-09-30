@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import { ArrowUpRight, Download, ExternalLink, Radio, Users, Route, BusFront, Gauge, WifiOff } from 'lucide-react';
 import { UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName, aggregate } from '../data';
 import { fmt, pct } from '../ui';
+import userscript from '../../public/micronauta-invitado.user.js?raw';
+
+const scriptUrl = URL.createObjectURL(new Blob([userscript], { type: 'text/javascript' }));
 
 const LIVE: Partial<Record<UnitName, { url: string; host: string }>> = {
   Comodoro: { url: 'https://micronauta.dnsalias.net/web/urbano/?conf=comodoro', host: 'micronauta.dnsalias.net' },
@@ -33,7 +36,7 @@ export function TraficoLive({ unit, notify }: { unit: UnitFilter; notify: (m: st
   };
   return <section className="live-panel">
     <div className="section-header compact"><div><span className="section-kicker">Micronauta</span><h2>Flota en tiempo real</h2></div>
-      <a className="text-button" href="/micronauta-invitado.user.js" download="micronauta-invitado.user.js" onClick={() => notify('Asistente descargado: instalalo con Tampermonkey para que el ingreso como invitado sea automático')}><Download size={15} /> Asistente de ingreso automático</a></div>
+      <a className="text-button" href={scriptUrl} download="micronauta-invitado.user.js" onClick={() => notify('Asistente descargado: instalalo con Tampermonkey para que el ingreso como invitado sea automático')}><Download size={15} /> Asistente de ingreso automático</a></div>
     <div className="live-grid">
       {list.map((u, idx) => { const l = LIVE[u]; const a = aggregate(u, [11]); const color = UNIT_COLOR[u];
         return <motion.article key={u} className={`live-card ${l ? '' : 'off'}`} style={{ ['--tone' as string]: color }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.06 }}>

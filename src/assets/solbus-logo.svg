@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">Solbus</title><desc id="desc">Logo naranja y negro de Solbus</desc>
+  <rect width="1200" height="560" fill="#fff"/>
+  <g fill="#f26522">
+    <path d="M220 75c13-19 42-19 55 0l16 143c4 37 31 55 65 39l126-75c23-14 49 10 36 34l-85 121c-18 26-1 60 31 66l143 27c27 5 33 40 8 54l-130 75c-30 17-30 55 0 72l130 75c25 14 19 49-8 54l-143 27c-32 6-49 40-31 66l85 121c13 24-13 48-36 34l-126-75c-34-16-61 2-65 39l-16 143c-3 26-40 32-53 8l-70-130c-16-30-55-30-72 0L20 980c-13 24-49 18-53-8l-16-143c-4-37-31-55-65-39l-126 75c-23 14-49-10-36-34l85-121c18-26 1-60-31-66l-143-27c-27-5-33-40-8-54l130-75c30-17 30-55 0-72l-130-75c-25-14-19-49 8-54l143-27c32-6 49-40 31-66l-85-121c-13-24 13-48 36-34l126 75c34 16 61-2 65-39l16-143c3-26 40-32 53-8l70 130c16 30 55 30 72 0z" transform="translate(270 -215) scale(.45)"/>
+  </g>
+  <text x="470" y="345" font-family="Arial, sans-serif" font-size="190" font-weight="700" letter-spacing="-12"><tspan fill="#f26522">ol</tspan><tspan fill="#111">bus</tspan></text>
+</svg>

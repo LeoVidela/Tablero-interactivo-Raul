@@ -11,6 +11,8 @@ import { Gerencia } from './views/Gerencia';
 import { TallerView } from './views/Taller';
 import { RRHHView } from './views/RRHH';
 import { TraficoLive } from './views/TraficoLive';
+import { SiniestrosView } from './views/Siniestros';
+import logoUrl from './assets/solbus-logo.svg';
 
 type Module = 'Resumen' | 'Tráfico' | 'Flota' | 'Taller' | 'RRHH' | 'Combustible' | 'Seguridad';
 type Base = { name: string; code: string; city: string; color: string; services: number; fleet: number; punctuality: number; absenteeism: number; passengers: number; alerts: number; vehicles: number; activeVehicles: number; workshop: number };
@@ -74,7 +76,7 @@ function App() {
 
   const filteredBases = useMemo(() => bases.filter((base) => (baseFilter === 'Todos' || base.name === baseFilter) && `${base.name} ${base.city}`.toLowerCase().includes(query.toLowerCase())), [baseFilter, query]);
   const visibleRecords = useMemo(() => (records[activeModule] || []).filter((item) => (baseFilter === 'Todos' || item.base === baseFilter) && `${item.title} ${item.detail} ${item.base}`.toLowerCase().includes(query.toLowerCase())), [activeModule, baseFilter, query]);
-  const managed = activeModule === 'Resumen' || activeModule === 'Taller' || activeModule === 'RRHH';
+  const managed = activeModule === 'Resumen' || activeModule === 'Taller' || activeModule === 'RRHH' || activeModule === 'Seguridad';
   const go = (module: Module) => { setActiveModule(module); setSelectedRecord(null); setMobileNav(false); };
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 3000); };
 
@@ -87,7 +89,7 @@ function App() {
 
   return <div className="app-shell"><div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
-      <div className="brand"><img src="/solbus-logo.svg" alt="Solbus" /></div>
+      <div className="brand"><img src={logoUrl} alt="Solbus" /></div>
       <div className="workspace"><span className="workspace-dot" /> Grupo Solbus <ChevronRight size={14} /></div>
       <p className="nav-title">Operación</p><nav>{(Object.keys(moduleMeta) as Module[]).slice(0, 5).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{item}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}</nav>
       <p className="nav-title second">Gestión</p><nav>{(['Combustible', 'Seguridad'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{item}</span></button>; })}<button className="nav-item" onClick={() => notify('La configuración estará disponible en la siguiente versión')}><Settings2 size={18} /><span>Configuración</span></button></nav>
@@ -95,13 +97,14 @@ function App() {
     </aside>
     <main className="main-content">
       <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><div className="breadcrumbs"><span>Grupo Solbus</span><ChevronRight size={14} /><strong>{activeModule}</strong></div><div className="top-actions"><div className="search"><Search size={16} /><input placeholder="Buscar base, línea, OT..." value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="notification-wrap"><button className="icon-button notification" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><i /></button>{showNotifications && <div className="notification-pop"><strong>Notificaciones</strong><span>7 alertas requieren atención</span><button onClick={() => { go('Taller'); setShowNotifications(false); }}>Ver alertas <ChevronRight size={14} /></button></div>}</div><div className="top-avatar">LV</div></div></header>
-      {activeModule !== 'Taller' && activeModule !== 'RRHH' && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : activeModule}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions">{!managed && <div className="period-switcher">{['Hoy', '7 días', '30 días'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>}
+      {activeModule !== 'Taller' && activeModule !== 'RRHH' && activeModule !== 'Seguridad' && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : activeModule}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions">{!managed && <div className="period-switcher">{['Hoy', '7 días', '30 días'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>}
       <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Unidad de negocio <strong>{baseFilter === 'Todos' ? 'Todas' : baseFilter}</strong></div><UnitSelector value={baseFilter} onChange={setBaseFilter} /></div>
       {activeModule === 'Resumen' ? <>
         <Gerencia unit={baseFilter} setUnit={setBaseFilter} go={(m) => go(m)} notify={notify} onRecord={(record) => setSelectedRecord(record)} />
         <section className="section-header"><div><span className="section-kicker">Visión por ubicación</span><h2>Las bases operativas</h2></div><button className="text-button" onClick={() => notify('Comparativa lista para seleccionar una base')}>Ver comparativa <ArrowUpRight size={15} /></button></section><section className="base-grid">{filteredBases.map((base) => <BaseCard base={base} onClick={() => setSelectedBase(base)} key={base.code} />)}</section>
       </> : activeModule === 'Taller' ? <TallerView unit={baseFilter} notify={notify} />
         : activeModule === 'RRHH' ? <RRHHView unit={baseFilter} notify={notify} />
+        : activeModule === 'Seguridad' ? <SiniestrosView unit={baseFilter} notify={notify} />
         : <>{activeModule === 'Tráfico' && <TraficoLive unit={baseFilter} notify={notify} />}<ModuleView module={activeModule} bases={filteredBases} records={visibleRecords} onBase={setSelectedBase} onRecord={setSelectedRecord} /></>}
     </main>
     <AnimatePresence>{selectedBase && <BaseDrawer base={selectedBase} onClose={() => setSelectedBase(null)} onModule={go} />}{selectedRecord && <RecordDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} />}</AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="toast"><CheckCircle2 size={17} /> {toast}</motion.div>}
