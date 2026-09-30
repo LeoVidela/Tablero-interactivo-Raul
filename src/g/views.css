@@ -241,3 +241,27 @@
 .filterbar .unit-selector{margin-left:auto}
 .nav-second{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
 .theme-toggle{transition:transform .25s}.theme-toggle:hover{transform:rotate(20deg);color:#ff9a63}
+
+/* ---------- Micronauta en vivo (servicio micronauta-live) ---------- */
+.live-bridge{display:flex;align-items:center;gap:8px}
+.live-cfg{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:0 0 14px;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.live-cfg label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#8c96ac;font-weight:600;flex:1;min-width:240px}
+.live-cfg input{padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:#0f1322;color:#e9ecf3;font:inherit;font-size:12.5px}
+.live-cfg small{flex-basis:100%;color:#7f8aa3;font-size:11px}.live-cfg code,.live-off-box code{font-family:'JetBrains Mono',monospace;font-size:11px;padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.07)}
+.live-streams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}.live-streams.n1{grid-template-columns:1fr}
+.live-stream{display:flex;flex-direction:column;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(160deg,rgba(27,32,51,.9),rgba(15,19,32,.9));overflow:hidden;border-top:3px solid var(--tone)}
+.live-stream header{display:flex;align-items:center;gap:10px;padding:14px 16px}.live-stream header>div{flex:1;min-width:0}
+.live-stream h3{margin:4px 0 0;font:600 18px 'Space Grotesk';letter-spacing:-.5px}.live-stream h3 small{font:500 12px 'DM Sans';color:#8c96ac;letter-spacing:0}
+.live-screen{position:relative;aspect-ratio:16/9;background:#070a12;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
+.live-shot{display:block;width:100%;height:100%;object-fit:contain;cursor:zoom-in}
+.live-wait{display:flex;align-items:center;justify-content:center;gap:8px;height:100%;color:#8c96ac;font-size:12px}
+.spin{animation:spin 1.2s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.live-off-box{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;text-align:center;color:#8c96ac;font-size:12px}
+.live-off-box b{color:#e9ecf3;font-size:14px}.live-off-box p{margin:0;max-width:420px;line-height:1.55}.live-off-box svg{color:#fb7185}
+.live-err{position:absolute;left:10px;right:10px;bottom:10px;margin:0;padding:8px 10px;border-radius:9px;background:rgba(239,68,68,.85);color:#fff;font-size:11.5px}
+.live-stream footer{padding:9px 16px;color:#7f8aa3;font-size:11px}
+.live-full{display:grid;place-items:center;padding:24px}
+.live-full-inner{width:min(1500px,100%);border-radius:18px;overflow:hidden;background:#0c101c;border:1px solid rgba(255,255,255,.12);box-shadow:0 40px 120px #000b}
+.live-full-inner header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}.live-full-inner h3{margin:0;font:600 16px 'Space Grotesk'}
+.live-shot.big{height:auto;max-height:82vh;cursor:default}
+@media(max-width:1000px){.live-streams{grid-template-columns:1fr}}
