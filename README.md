@@ -26,3 +26,12 @@ Abrir `http://localhost:5173`.
 - Responsive para escritorio, tablet y móvil.
 
 Los datos se encuentran en `src/main.tsx` como dataset de demostración. En la siguiente etapa se pueden reemplazar por endpoints de una API y autenticación por roles.
+
+
+## Novedades: pedido de Gerencia (30/09/2026)
+
+- **Resumen = Tablero de control integral**: 6 grupos de indicadores (Operación, Flota, RR.HH., Seguridad, Económico, Demanda) con semáforo vs. objetivo y variación vs. período anterior, 3 gráficos, tabla por línea y 5 alertas dinámicas. Selector global **Todos · Córdoba · Comodoro · San Luis · Villa Mercedes** y selector de período (trimestres y meses).
+- **Taller & Mantenimiento**: 10 pestañas (Resumen general, Preventivo, Correctivo, Reincidencias, Productividad, Análisis de fallas, Repuestos y gastos, Combustible, Kilómetros, Personal taller). Al tocar una OT, unidad o preventivo se abre la **ficha del coche** con el bus marcando la zona intervenida, materiales usados, costos e historial.
+- **RR.HH.**: resumen mensual por área + análisis individual por legajo.
+- **Tráfico**: acceso a la flota en tiempo real de Micronauta (Comodoro y Córdoba). `public/micronauta-invitado.user.js` (Tampermonkey) acciona "Entrar como invitado" automáticamente.
+- Datos demo determinísticos en `src/data.ts`, `src/taller.ts` y `src/rrhh.ts`.

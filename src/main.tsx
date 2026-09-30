@@ -4,6 +4,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, BusFront, CalendarDays, CheckCircle2, ChevronRight, CircleHelp, Clock3, Download, Fuel, Gauge, LayoutDashboard, Menu, Search, Settings2, ShieldCheck, Sparkles, Users, Wrench, X, Zap } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import './styles.css';
+import './views.css';
+import { UnitFilter } from './data';
+import { UnitSelector } from './ui';
+import { Gerencia } from './views/Gerencia';
+import { TallerView } from './views/Taller';
+import { RRHHView } from './views/RRHH';
+import { TraficoLive } from './views/TraficoLive';
 
 type Module = 'Resumen' | 'Tráfico' | 'Flota' | 'Taller' | 'RRHH' | 'Combustible' | 'Seguridad';
 type Base = { name: string; code: string; city: string; color: string; services: number; fleet: number; punctuality: number; absenteeism: number; passengers: number; alerts: number; vehicles: number; activeVehicles: number; workshop: number };
@@ -57,7 +64,7 @@ const format = (value: number) => value.toLocaleString('es-AR');
 function App() {
   const [activeModule, setActiveModule] = useState<Module>('Resumen');
   const [period, setPeriod] = useState('Hoy');
-  const [baseFilter, setBaseFilter] = useState('Todas las bases');
+  const [baseFilter, setBaseFilter] = useState<UnitFilter>('Todos');
   const [query, setQuery] = useState('');
   const [selectedBase, setSelectedBase] = useState<Base | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<RecordItem | null>(null);
@@ -65,8 +72,9 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [toast, setToast] = useState('');
 
-  const filteredBases = useMemo(() => bases.filter((base) => (baseFilter === 'Todas las bases' || base.name === baseFilter) && `${base.name} ${base.city}`.toLowerCase().includes(query.toLowerCase())), [baseFilter, query]);
-  const visibleRecords = useMemo(() => (records[activeModule] || []).filter((item) => (baseFilter === 'Todas las bases' || item.base === baseFilter) && `${item.title} ${item.detail} ${item.base}`.toLowerCase().includes(query.toLowerCase())), [activeModule, baseFilter, query]);
+  const filteredBases = useMemo(() => bases.filter((base) => (baseFilter === 'Todos' || base.name === baseFilter) && `${base.name} ${base.city}`.toLowerCase().includes(query.toLowerCase())), [baseFilter, query]);
+  const visibleRecords = useMemo(() => (records[activeModule] || []).filter((item) => (baseFilter === 'Todos' || item.base === baseFilter) && `${item.title} ${item.detail} ${item.base}`.toLowerCase().includes(query.toLowerCase())), [activeModule, baseFilter, query]);
+  const managed = activeModule === 'Resumen' || activeModule === 'Taller' || activeModule === 'RRHH';
   const go = (module: Module) => { setActiveModule(module); setSelectedRecord(null); setMobileNav(false); };
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 3000); };
 
@@ -87,14 +95,14 @@ function App() {
     </aside>
     <main className="main-content">
       <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><div className="breadcrumbs"><span>Grupo Solbus</span><ChevronRight size={14} /><strong>{activeModule}</strong></div><div className="top-actions"><div className="search"><Search size={16} /><input placeholder="Buscar base, línea, OT..." value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="notification-wrap"><button className="icon-button notification" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><i /></button>{showNotifications && <div className="notification-pop"><strong>Notificaciones</strong><span>7 alertas requieren atención</span><button onClick={() => { go('Taller'); setShowNotifications(false); }}>Ver alertas <ChevronRight size={14} /></button></div>}</div><div className="top-avatar">LV</div></div></header>
-      <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : activeModule}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions"><div className="period-switcher">{['Hoy', '7 días', '30 días'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div><button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>
-      <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Período <strong>{period}</strong></div><select value={baseFilter} onChange={(e) => setBaseFilter(e.target.value)}><option>Todas las bases</option>{bases.map((b) => <option key={b.name}>{b.name}</option>)}</select>{baseFilter !== 'Todas las bases' && <button className="clear-filter" onClick={() => setBaseFilter('Todas las bases')}>Limpiar filtros <X size={13} /></button>}</div>
+      {activeModule !== 'Taller' && activeModule !== 'RRHH' && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : activeModule}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions">{!managed && <div className="period-switcher">{['Hoy', '7 días', '30 días'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>}
+      <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Unidad de negocio <strong>{baseFilter === 'Todos' ? 'Todas' : baseFilter}</strong></div><UnitSelector value={baseFilter} onChange={setBaseFilter} /></div>
       {activeModule === 'Resumen' ? <>
-        <section className="metrics-grid">{metrics.map((metric, index) => <motion.button initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .07 }} whileHover={{ y: -4 }} className="metric-card" key={metric.label} onClick={metric.action}><div className="metric-top"><span className="metric-icon"><metric.icon size={18} /></span><span className={`change ${metric.tone}`}>{index === 1 ? '-1,8%' : '+2,4%'}</span></div><span className="metric-label">{metric.label}</span><strong>{metric.value}</strong><span className="metric-description">{metric.detail}<ArrowUpRight size={13} /></span></motion.button>)}</section>
-        <section className="dashboard-grid"><div className="panel chart-panel"><div className="panel-heading"><div><span className="section-kicker">Rendimiento operativo</span><h2>El pulso de tu servicio</h2></div><span className="live-label"><span /> En vivo</span></div><div className="chart-legend"><span><i className="legend-purple" /> Cumplimiento</span><span><i className="legend-cyan" /> Meta 92%</span></div><div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={traffic}><defs><linearGradient id="pulseGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ff6b1a" stopOpacity={.35} /><stop offset="100%" stopColor="#ff6b1a" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)" /><XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#7f8aa3', fontSize: 11 }} /><YAxis domain={[70, 105]} axisLine={false} tickLine={false} tick={{ fill: '#7f8aa3', fontSize: 11 }} tickFormatter={(v) => `${v}%`} /><Tooltip contentStyle={{ background: '#151a2b', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, color: '#fff' }} formatter={(v) => [`${v}%`, 'Cumplimiento']} /><Area type="monotone" dataKey="value" stroke="#ff8a4c" strokeWidth={3} fill="url(#pulseGradient)" dot={false} activeDot={{ r: 5, fill: '#fff', stroke: '#ff6b1a', strokeWidth: 3 }} /></AreaChart></ResponsiveContainer></div></div><FleetPanel onOpen={() => go('Flota')} /></section>
+        <Gerencia unit={baseFilter} setUnit={setBaseFilter} go={(m) => go(m)} notify={notify} onRecord={(record) => setSelectedRecord(record)} />
         <section className="section-header"><div><span className="section-kicker">Visión por ubicación</span><h2>Las bases operativas</h2></div><button className="text-button" onClick={() => notify('Comparativa lista para seleccionar una base')}>Ver comparativa <ArrowUpRight size={15} /></button></section><section className="base-grid">{filteredBases.map((base) => <BaseCard base={base} onClick={() => setSelectedBase(base)} key={base.code} />)}</section>
-        <section className="bottom-row"><Alerts onSelect={(record) => setSelectedRecord(record)} /><div className="panel insight-panel"><div className="insight-icon"><Sparkles size={18} /></div><span className="section-kicker">Pulse insight</span><h2>Una oportunidad detectada</h2><p>Villa Mercedes mejoró su puntualidad <strong>+4,8%</strong> esta semana. El turno tarde es el principal impulsor.</p><button className="insight-button" onClick={() => { setBaseFilter('Villa Mercedes'); go('Tráfico'); }}>Explorar señal <ArrowUpRight size={15} /></button></div></section>
-      </> : <ModuleView module={activeModule} bases={filteredBases} records={visibleRecords} onBase={setSelectedBase} onRecord={setSelectedRecord} />}
+      </> : activeModule === 'Taller' ? <TallerView unit={baseFilter} notify={notify} />
+        : activeModule === 'RRHH' ? <RRHHView unit={baseFilter} notify={notify} />
+        : <>{activeModule === 'Tráfico' && <TraficoLive unit={baseFilter} notify={notify} />}<ModuleView module={activeModule} bases={filteredBases} records={visibleRecords} onBase={setSelectedBase} onRecord={setSelectedRecord} /></>}
     </main>
     <AnimatePresence>{selectedBase && <BaseDrawer base={selectedBase} onClose={() => setSelectedBase(null)} onModule={go} />}{selectedRecord && <RecordDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} />}</AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="toast"><CheckCircle2 size={17} /> {toast}</motion.div>}
   </div>;
