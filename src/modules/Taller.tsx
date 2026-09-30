@@ -17,7 +17,7 @@ const typeGroups: { key: string; label: string; types: OTType[]; color: string }
   { key: 'corr', label: 'Correctivo', types: ['Correctivo'], color: '#E85818' },
   { key: 'urg', label: 'Auxilio y siniestro', types: ['Auxilio en calle', 'Siniestro'], color: '#d55181' },
 ];
-const tooltipStyle = { background: '#151a2b', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, color: '#fff', fontSize: 12 };
+const tooltipStyle = { background: 'var(--tip-bg)', border: '1px solid var(--tip-bd)', borderRadius: 12, color: 'var(--tip-fg)', fontSize: 12 };
 
 export function Taller({ baseFilter, query, period, onOpenUnit }: { baseFilter: string; query: string; period: string; onOpenUnit: OpenUnit }) {
   const [view, setView] = useState<BusView>('corte');
@@ -86,7 +86,7 @@ export function Taller({ baseFilter, query, period, onOpenUnit }: { baseFilter: 
       <div className="panel">
         <div className="panel-heading"><div><span className="section-kicker">Últimos 12 meses{component ? ` · ${componentById[component].name}` : ''}</span><h2>Órdenes de trabajo por mes</h2></div></div>
         <div className="chart-legend">{typeGroups.map((g) => <span key={g.key}><i style={{ background: g.color }} /> {g.label}</span>)}</div>
-        <div className="chart-wrap short"><ResponsiveContainer width="100%" height="100%"><BarChart data={monthly} barCategoryGap="28%"><CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)" /><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#7f8aa3', fontSize: 11 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#7f8aa3', fontSize: 11 }} width={30} allowDecimals={false} /><Tooltip cursor={{ fill: 'rgba(255,255,255,.04)' }} contentStyle={tooltipStyle} formatter={(v, n) => [v, typeGroups.find((g) => g.key === n)?.label ?? n]} />{typeGroups.map((g, i) => <Bar key={g.key} dataKey={g.key} stackId="a" fill={g.color} stroke="#0f1322" strokeWidth={2} radius={i === typeGroups.length - 1 ? [4, 4, 0, 0] : 0} />)}</BarChart></ResponsiveContainer></div>
+        <div className="chart-wrap short"><ResponsiveContainer width="100%" height="100%"><BarChart data={monthly} barCategoryGap="28%"><CartesianGrid vertical={false} stroke="var(--grid)" /><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'var(--ax)', fontSize: 11 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--ax)', fontSize: 11 }} width={30} allowDecimals={false} /><Tooltip cursor={{ fill: 'var(--cursor)' }} contentStyle={tooltipStyle} formatter={(v, n) => [v, typeGroups.find((g) => g.key === n)?.label ?? n]} />{typeGroups.map((g, i) => <Bar key={g.key} dataKey={g.key} stackId="a" fill={g.color} stroke="var(--dot-bg)" strokeWidth={2} radius={i === typeGroups.length - 1 ? [4, 4, 0, 0] : 0} />)}</BarChart></ResponsiveContainer></div>
       </div>
       <div className="panel">
         <div className="panel-heading"><div><span className="section-kicker">{period}{component ? ` · ${componentById[component].name}` : ''}</span><h2>Materiales por base</h2></div></div>

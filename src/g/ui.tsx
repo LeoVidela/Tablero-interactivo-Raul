@@ -8,9 +8,9 @@ export const money = (v: number, d = 2) => `$ ${fmt(v, d)}`;
 export const moneyM = (v: number) => `$ ${fmt(v / 1_000_000, 1)} M`;
 export const signed = (v: number, d = 1) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmt(Math.abs(v), d)}`;
 
-export const AXIS = { fill: '#7f8aa3', fontSize: 11 } as const;
-export const GRID = 'rgba(255,255,255,.06)';
-export const TOOLTIP_STYLE = { background: '#151a2b', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, color: '#fff', fontSize: 12 } as const;
+export const AXIS = { fill: 'var(--ax)', fontSize: 11 } as const;
+export const GRID = 'var(--grid)';
+export const TOOLTIP_STYLE = { background: 'var(--tip-bg)', border: '1px solid var(--tip-bd)', borderRadius: 12, color: 'var(--tip-fg)', fontSize: 12 } as const;
 
 export function UnitSelector({ value, onChange }: { value: UnitFilter; onChange: (u: UnitFilter) => void }) {
   return <div className="unit-selector" role="tablist" aria-label="Unidad de negocio">

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Moon, Sun } from 'lucide-react';
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, BusFront, CalendarDays, CheckCircle2, ChevronRight, CircleHelp, Clock3, Download, Fuel, Gauge, LayoutDashboard, Menu, Search, Settings2, ShieldCheck, Sparkles, Users, Wrench, X, Zap } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -10,7 +11,8 @@ import { bases, isOpen, now, orders as allOrders, unitById, units } from './data
 import { componentById } from './data/catalog';
 import type { Base, Module, RecordItem } from './data/types';
 import { ago } from './lib/format';
-import logoUrl from './assets/solbus-logo-dark.png';
+import logoDark from './assets/solbus-logo-dark.png';
+import logoLight from './assets/solbus-logo.svg';
 import './g/views.css';
 import type { UnitFilter } from './g/data';
 import { UnitSelector } from './g/ui';
@@ -22,6 +24,7 @@ import { TraficoLive } from './g/views/TraficoLive';
 import { SiniestrosView } from './g/views/Siniestros';
 
 const traffic = [{ time: '06:00', value: 82 }, { time: '08:00', value: 94 }, { time: '10:00', value: 88 }, { time: '12:00', value: 91 }, { time: '14:00', value: 86 }, { time: '16:00', value: 96 }, { time: '18:00', value: 99 }, { time: '20:00', value: 93 }];
+export const moduleLabel = (m: Module) => (m === 'Seguridad' ? 'Siniestros y Seguridad' : m);
 const moduleMeta: Record<Module, { icon: React.ElementType; subtitle: string }> = { Resumen: { icon: LayoutDashboard, subtitle: 'Una mirada completa de la operación' }, Tráfico: { icon: Activity, subtitle: 'Servicios, recorridos y puntualidad' }, Flota: { icon: BusFront, subtitle: 'Disponibilidad y estado de unidades' }, Taller: { icon: Wrench, subtitle: 'Mantenimiento preventivo y correctivo' }, RRHH: { icon: Users, subtitle: 'Dotación, turnos y ausentismo' }, Combustible: { icon: Fuel, subtitle: 'Consumos y rendimiento por base' }, Seguridad: { icon: ShieldCheck, subtitle: 'Incidentes y cumplimiento' } };
 
 const records: Record<Module, RecordItem[]> = {
@@ -67,6 +70,8 @@ export function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [toast, setToast] = useState('');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'));
+  const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; setTheme(t); document.documentElement.dataset.theme = t; try { localStorage.setItem('solbus-theme', t); } catch { /* sin almacenamiento: el tema dura la sesión */ } };
 
   const filteredBases = useMemo(() => bases.filter((base) => (baseFilter === 'Todas las bases' || base.name === baseFilter) && `${base.name} ${base.city}`.toLowerCase().includes(query.toLowerCase())), [baseFilter, query]);
   const visibleRecords = useMemo(() => (records[activeModule] || []).filter((item) => (baseFilter === 'Todas las bases' || item.base === baseFilter) && `${item.title} ${item.detail} ${item.base}`.toLowerCase().includes(query.toLowerCase())), [activeModule, baseFilter, query]);
@@ -84,15 +89,15 @@ export function App() {
   const periodic = activeModule === 'Taller' || activeModule === 'Flota';
   return <OpenUnitCtx.Provider value={openUnit}><div className="app-shell"><div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
-      <div className="brand"><img src={logoUrl} alt="Solbus" /></div>
+      <div className="brand"><img src={theme === 'light' ? logoLight : logoDark} alt="Solbus" /></div>
       <div className="workspace"><span className="workspace-dot" /> Grupo Solbus <ChevronRight size={14} /></div>
-      <p className="nav-title">Operación</p><nav>{(Object.keys(moduleMeta) as Module[]).slice(0, 5).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{item}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}</nav>
-      <p className="nav-title second">Gestión</p><nav>{(['Combustible', 'Seguridad'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{item}</span></button>; })}<button className="nav-item" onClick={() => notify('La configuración estará disponible en la siguiente versión')}><Settings2 size={18} /><span>Configuración</span></button></nav>
-      <div className="sidebar-bottom"><div className="help"><CircleHelp size={17} /><div><strong>¿Necesitas ayuda?</strong><span>Centro de soporte</span></div></div><div className="user"><div className="avatar">LV</div><div><strong>Leo Videla</strong><span>Gerente general</span></div><ChevronRight size={15} /></div></div>
+      <p className="nav-title">Operación</p><nav>{(Object.keys(moduleMeta) as Module[]).slice(0, 5).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{moduleLabel(item)}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}</nav>
+      <nav className="nav-second">{(['Combustible', 'Seguridad'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{moduleLabel(item)}</span></button>; })}<button className="nav-item" onClick={() => notify('La configuración estará disponible en la siguiente versión')}><Settings2 size={18} /><span>Configuración</span></button></nav>
+      <div className="sidebar-bottom"><div className="help"><CircleHelp size={17} /><div><strong>¿Necesitas ayuda?</strong><span>Centro de soporte</span></div></div><div className="user"><div className="avatar">LV</div><div><strong>Leo Videla</strong><span>Sistemas</span></div><ChevronRight size={15} /></div></div>
     </aside>
     <main className="main-content">
-      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><div className="breadcrumbs"><span>Grupo Solbus</span><ChevronRight size={14} /><strong>{activeModule}</strong></div><div className="top-actions"><div className="search"><Search size={16} /><input placeholder="Buscar interno, OT, mecánico..." value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="notification-wrap"><button className="icon-button notification" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><i /></button>{showNotifications && <div className="notification-pop"><strong>Notificaciones</strong><span>{allOrders.filter((o) => isOpen(o) && o.priority === 'Alta').length} OT de prioridad alta en taller</span><button onClick={() => { go('Taller'); setShowNotifications(false); }}>Ver alertas <ChevronRight size={14} /></button></div>}</div><div className="top-avatar">LV</div></div></header>
-      {!ownHeader && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : activeModule}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions">{periodic && <div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>}
+      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><div className="breadcrumbs"><span>Grupo Solbus</span><ChevronRight size={14} /><strong>{moduleLabel(activeModule)}</strong></div><div className="top-actions"><div className="search"><Search size={16} /><input placeholder="Buscar interno, OT, mecánico..." value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="notification-wrap"><button className="icon-button notification" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><i /></button>{showNotifications && <div className="notification-pop"><strong>Notificaciones</strong><span>{allOrders.filter((o) => isOpen(o) && o.priority === 'Alta').length} OT de prioridad alta en taller</span><button onClick={() => { go('Taller'); setShowNotifications(false); }}>Ver alertas <ChevronRight size={14} /></button></div>}</div><button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><div className="top-avatar">LV</div></div></header>
+      {!ownHeader && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : moduleLabel(activeModule)}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions">{periodic && <div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>}
       <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Unidad de negocio <strong>{unit === 'Todos' ? 'Todas' : unit}</strong>{periodic && <> · Período <strong>{period}</strong></>}</div><UnitSelector value={unit} onChange={setUnit} /></div>
       {activeModule === 'Resumen' ? <>
         <Gerencia unit={unit} setUnit={setUnit} go={(m) => go(m)} notify={notify} onRecord={(r) => setSelectedRecord(r)} />

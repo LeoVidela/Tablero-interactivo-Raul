@@ -1,3 +1,4 @@
+:root{--grid:rgba(255,255,255,.06);--cursor:rgba(255,255,255,.04);--tip-bg:#151a2b;--tip-bd:rgba(255,255,255,.1);--tip-fg:#fff;--dot-bg:#0b1020;--ax:#7f8aa3;--ink:#fff}
 /* Gerencia · Taller & Mantenimiento · RR.HH. · Tráfico en vivo — mismo lenguaje visual (oscuro + naranja Solbus) */
 .unit-selector{display:flex;gap:4px;padding:4px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);overflow-x:auto;max-width:100%}
 .unit-selector button{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;background:transparent;color:#8c96ac;font-size:12px;font-weight:600;white-space:nowrap;transition:.18s}
@@ -238,3 +239,5 @@
 .t-tabbar .g-select{margin-bottom:6px}
 .taller>.panel,.taller>section{min-width:0}
 .filterbar .unit-selector{margin-left:auto}
+.nav-second{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)}
+.theme-toggle{transition:transform .25s}.theme-toggle:hover{transform:rotate(20deg);color:#ff9a63}

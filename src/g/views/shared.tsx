@@ -28,8 +28,8 @@ export function GaugeHealth({ v, exc, att, crit }: { v: number; exc: number; att
   const ang = 180 - v * 1.8; const nx = 110 + 66 * Math.cos((Math.PI * ang) / 180); const ny = 108 - 66 * Math.sin((Math.PI * ang) / 180);
   return <div className="t-gauge"><div className="t-gauge-dial"><svg viewBox="0 0 220 132" role="img" aria-label={`Índice de salud de la flota ${v}`}>
     <path d={arc(110, 108, 84, 180, 180 - 69 * 1.8)} stroke={C.red} strokeWidth="16" fill="none" /><path d={arc(110, 108, 84, 180 - 70 * 1.8, 180 - 89 * 1.8)} stroke={C.amber} strokeWidth="16" fill="none" /><path d={arc(110, 108, 84, 180 - 90 * 1.8, 0)} stroke={C.green} strokeWidth="16" fill="none" />
-    <line x1="110" y1="108" x2={nx} y2={ny} stroke="#fff" strokeWidth="4" strokeLinecap="round" /><circle cx="110" cy="108" r="9" fill="#0b1020" stroke="#fff" strokeWidth="3" />
-    <text x="110" y="62" textAnchor="middle" fontSize="10" fill="#7f8aa3">ÍNDICE PROMEDIO</text></svg>
+    <line x1="110" y1="108" x2={nx} y2={ny} stroke="var(--ink)" strokeWidth="4" strokeLinecap="round" /><circle cx="110" cy="108" r="9" fill="var(--dot-bg)" stroke="#fff" strokeWidth="3" />
+    <text x="110" y="62" textAnchor="middle" fontSize="10" fill="var(--ax)">ÍNDICE PROMEDIO</text></svg>
     <div className="t-gauge-value">{v}</div></div>
     <ul className="t-legend compact"><li><i style={{ background: C.green }} />Excelente (90-100)<b>{exc} un.</b></li><li><i style={{ background: C.amber }} />Atención (70-89)<b>{att} un.</b></li><li><i style={{ background: C.red }} />Crítico (0-69)<b>{crit} un.</b></li></ul></div>;
 }
@@ -37,4 +37,4 @@ export function Bars({ rows, color, fmtV, onClick }: { rows: { key: string; labe
   const max = Math.max(...rows.map((r) => r.value), 1);
   return <ul className="t-hbars">{rows.map((r) => <li key={r.key} className={onClick ? 'clickable' : ''} onClick={() => onClick?.(r.key)}><span className="t-hbar-label">{r.label}</span><div className="t-hbar-track"><div style={{ width: `${(r.value / max) * 100}%`, background: r.color ?? color }} /></div><b>{fmtV(r.value)}</b>{r.extra}</li>)}</ul>;
 }
-export const Tip = <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,.04)' }} />;
+export const Tip = <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'var(--cursor)' }} />;

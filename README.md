@@ -58,3 +58,4 @@ Todo se construyó **encima** del tablero con la imagen real del bus: la ficha t
 - **RR.HH.** (resumen mensual y análisis por legajo) y **Tráfico** con acceso en vivo a Micronauta (Córdoba y Comodoro; asistente `public/micronauta-invitado.user.js` para "Entrar como invitado").
 - **Datos unificados**: los indicadores de Gerencia se calculan con la misma flota (163 internos) y las mismas OT de `src/data/fleet.ts`. El plan de mantenimiento por km de cada coche ahora sale de sus OT de preventivo/service. Fecha de corte de la demo: 30/09/2026.
 - **Versión HTML de un solo archivo**: `npm run build:html` → `dist-html/index.html` (se abre con doble clic, sin servidor).
+- **Modo claro / oscuro**: botón sol/luna en la barra superior (se recuerda en el navegador). El tema claro (`src/theme-light.css`) se genera desde las hojas oscuras con `npm run theme:light` (`scripts/gen-light-theme.py`); correrlo después de cambiar estilos.

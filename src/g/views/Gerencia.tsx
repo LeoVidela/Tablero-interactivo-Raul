@@ -102,30 +102,30 @@ export function Gerencia({ unit, setUnit, go, notify, onRecord }: Props) {
         <div className="g-chart-box"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={series} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke={GRID} /><XAxis dataKey="m" axisLine={false} tickLine={false} tick={AXIS} />
           <YAxis yAxisId="l" axisLine={false} tickLine={false} tick={AXIS} tickFormatter={mil} /><YAxis yAxisId="r" orientation="right" domain={[90, 100]} axisLine={false} tickLine={false} tick={AXIS} tickFormatter={(v) => `${v}%`} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,.04)' }} formatter={(v: number, n: string) => (n === 'Cumplimiento' ? [`${fmt(v, 1)}%`, n] : [fmt(v), n])} />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: '#8c96ac' }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'var(--cursor)' }} formatter={(v: number, n: string) => (n === 'Cumplimiento' ? [`${fmt(v, 1)}%`, n] : [fmt(v), n])} />
+          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--ax)' }} />
           <Bar yAxisId="l" dataKey="kmProg" name="Programados" fill="#93c5fd" fillOpacity={0.55} radius={[4, 4, 0, 0]} /><Bar yAxisId="l" dataKey="kmExec" name="Ejecutados" fill="#2563eb" radius={[4, 4, 0, 0]} />
-          <Line yAxisId="r" dataKey="cumpl" name="Cumplimiento" stroke="#34d399" strokeWidth={2.5} dot={{ r: 4, fill: '#0b1020', stroke: '#34d399', strokeWidth: 2 }} />
+          <Line yAxisId="r" dataKey="cumpl" name="Cumplimiento" stroke="#34d399" strokeWidth={2.5} dot={{ r: 4, fill: 'var(--dot-bg)', stroke: '#34d399', strokeWidth: 2 }} />
         </ComposedChart></ResponsiveContainer></div>
       </Panel>
       <Panel kicker="Flota" title="Disponibilidad de flota" className="g-chart">
         <div className="g-chart-box"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={series} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke={GRID} /><XAxis dataKey="m" axisLine={false} tickLine={false} tick={AXIS} />
           <YAxis yAxisId="l" axisLine={false} tickLine={false} tick={AXIS} /><YAxis yAxisId="r" orientation="right" domain={[80, 100]} axisLine={false} tickLine={false} tick={AXIS} tickFormatter={(v) => `${v}%`} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,.04)' }} formatter={(v: number, n: string) => (n === 'Disponibilidad' ? [`${fmt(v, 1)}%`, n] : [fmt(v), n])} />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: '#8c96ac' }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'var(--cursor)' }} formatter={(v: number, n: string) => (n === 'Disponibilidad' ? [`${fmt(v, 1)}%`, n] : [fmt(v), n])} />
+          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--ax)' }} />
           <Bar yAxisId="l" dataKey="oper" name="Operativas" fill="#2563eb" radius={[4, 4, 0, 0]} /><Bar yAxisId="l" dataKey="out" name="Fuera de servicio" fill="#ef4444" radius={[4, 4, 0, 0]} />
-          <Line yAxisId="r" dataKey="disp" name="Disponibilidad" stroke="#34d399" strokeWidth={2.5} dot={{ r: 4, fill: '#0b1020', stroke: '#34d399', strokeWidth: 2 }} />
+          <Line yAxisId="r" dataKey="disp" name="Disponibilidad" stroke="#34d399" strokeWidth={2.5} dot={{ r: 4, fill: 'var(--dot-bg)', stroke: '#34d399', strokeWidth: 2 }} />
         </ComposedChart></ResponsiveContainer></div>
       </Panel>
       <Panel kicker="Demanda" title="Pasajeros transportados" className="g-chart">
         <div className="g-chart-box"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={series} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke={GRID} /><XAxis dataKey="m" axisLine={false} tickLine={false} tick={AXIS} />
           <YAxis yAxisId="l" axisLine={false} tickLine={false} tick={AXIS} tickFormatter={mil} /><YAxis yAxisId="r" orientation="right" domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={AXIS} tickFormatter={(v) => fmt(v, 2)} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,.04)' }} formatter={(v: number, n: string) => (n === 'IPK' ? [fmt(v, 2), n] : [fmt(v), n])} />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: '#8c96ac' }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'var(--cursor)' }} formatter={(v: number, n: string) => (n === 'IPK' ? [fmt(v, 2), n] : [fmt(v), n])} />
+          <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: 'var(--ax)' }} />
           <Bar yAxisId="l" dataKey="pax" name="Pasajeros" fill="#2563eb" radius={[4, 4, 0, 0]} />
-          <Line yAxisId="r" dataKey="ipk" name="IPK" stroke="#fbbf24" strokeWidth={2.5} dot={{ r: 4, fill: '#0b1020', stroke: '#fbbf24', strokeWidth: 2 }} />
+          <Line yAxisId="r" dataKey="ipk" name="IPK" stroke="#fbbf24" strokeWidth={2.5} dot={{ r: 4, fill: 'var(--dot-bg)', stroke: '#fbbf24', strokeWidth: 2 }} />
         </ComposedChart></ResponsiveContainer></div>
       </Panel>
       <Panel kicker={period.quarter ? 'Trimestre' : 'Mes'} title="Indicadores por línea" className="g-lines">
