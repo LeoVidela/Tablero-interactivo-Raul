@@ -15,7 +15,7 @@ const between = (min: number, max: number) => min + rand() * (max - min);
 const int = (min: number, max: number) => Math.floor(between(min, max + 1));
 const pick = <T,>(items: T[]) => items[Math.floor(rand() * items.length)];
 const DAY = 86_400_000;
-const today = new Date(); today.setHours(9, 0, 0, 0);
+const today = new Date(2026, 8, 30, 9, 0, 0, 0); // fecha de corte de la demo (alineada con los tableros de Gerencia)
 
 type BaseSeed = { name: string; code: string; city: string; color: string; first: number; count: number; lines: string[]; mechanics: string[]; services: number; punctuality: number; absenteeism: number; passengers: number; alerts: number };
 
@@ -87,6 +87,37 @@ function buildUnits(seed: BaseSeed): Unit[] {
 }
 
 export const units: Unit[] = baseSeeds.flatMap(buildUnits);
+
+/* Plan de mantenimiento por km: cada coche tiene sus preventivos (20.000 km) y services (30.000 km) como OT reales,
+   y el "último preventivo / service" de la ficha sale de esas OT. Usa un generador propio por coche para no
+   alterar el resto de la flota (internos, dominios, estados y correctivos quedan iguales). */
+const PLAN_TITLES = ['Preventivo 20.000 km', 'Service 30.000 km'];
+function schedulePlan(u: Unit) {
+  const seed = baseSeeds.find((b) => b.name === u.base)!;
+  const r = mulberry32(20260930 + Number(u.interno) * 7919);
+  const ri = (a: number, b: number) => a + Math.floor(r() * (b - a + 1));
+  const dailyKm = u.km / Math.max(300, (2026.7 - u.year) * 300);
+  u.orders = u.orders.filter((o) => !(PLAN_TITLES.includes(o.title) && o.status === 'Cerrada'));
+  const add = (type: 'Preventivo 20K' | 'Service 30K', every: number) => {
+    const t = templates.find((x) => x.type === type && PLAN_TITLES.includes(x.title))!;
+    const late = r() < 0.12 ? ri(1, 12000) : 0; // ~12% de los coches con el plan vencido
+    let last = u.km - ri(300, every - 600) - late;
+    const lastDone = last;
+    for (let k = 0; k < 8; k++, last -= every) {
+      const days = (u.km - last) / dailyKm; if (days > 365) break;
+      const opened = new Date(today.getTime() - days * DAY + ri(7, 10) * 3_600_000);
+      const hours = Math.round((t.hours[0] + r() * (t.hours[1] - t.hours[0])) * 2) / 2;
+      const materials = t.items.flatMap(([code, mn, mx]) => { const qty = ri(mn, mx); if (!qty) return []; const m = materialByCode[code]; return [{ code, name: m.name, unit: m.unit, qty, price: m.price, origin: 'Pañol' as const }]; });
+      u.orders.push({ id: '', unit: u.interno, base: u.base, type, status: 'Cerrada', priority: 'Baja', opened, closed: new Date(opened.getTime() + (hours + ri(1, 20)) * 3_600_000), km: Math.round(last), origin: 'Plan de mantenimiento por km', components: t.components, title: t.title, diagnosis: t.diagnosis, mechanic: seed.mechanics[ri(0, seed.mechanics.length - 1)], hours, materials });
+    }
+    return Math.round(lastDone);
+  };
+  u.lastPreventiveKm = add('Preventivo 20K', PREVENTIVE_KM_);
+  u.lastServiceKm = add('Service 30K', SERVICE_KM_);
+  u.orders.sort((a, b) => b.opened.getTime() - a.opened.getTime());
+}
+const PREVENTIVE_KM_ = 20000; const SERVICE_KM_ = 30000;
+units.forEach(schedulePlan);
 export const orders: WorkOrder[] = units.flatMap((u) => u.orders).sort((a, b) => a.opened.getTime() - b.opened.getTime());
 orders.forEach((o) => { o.id = `OT-${String(4200 + ++otSeq)}`; });
 orders.reverse();

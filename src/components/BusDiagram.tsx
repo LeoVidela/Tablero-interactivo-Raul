@@ -1,3 +1,5 @@
+import corteImg from '../assets/bus-corte.webp';
+import chasisImg from '../assets/bus-chasis.webp';
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Wrench } from 'lucide-react';
@@ -8,8 +10,8 @@ import { date, fmt, moneyShort } from '../lib/format';
 export type SpotStat = { count: number; open: boolean; last?: Date; cost?: number };
 
 const views: Record<BusView, { src: string; label: string; ratio: string }> = {
-  corte: { src: '/img/bus-corte.webp', label: 'Corte lateral', ratio: '938 / 560' },
-  chasis: { src: '/img/bus-chasis.webp', label: 'Chasis y despiece', ratio: '1376 / 768' },
+  corte: { src: corteImg, label: 'Corte lateral', ratio: '938 / 560' },
+  chasis: { src: chasisImg, label: 'Chasis y despiece', ratio: '1376 / 768' },
 };
 
 type Props = {

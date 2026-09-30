@@ -46,3 +46,15 @@ Abrir `http://localhost:5173`.
 - Responsive para escritorio, tablet y móvil.
 
 Los datos son ficticios y se generan de forma determinística en `src/data/` (`fleet.ts` para unidades y OT, `catalog.ts` para componentes del bus, ubicación de cada zona sobre las imágenes y catálogo de pañol). En la siguiente etapa se pueden reemplazar por endpoints de una API y autenticación por roles.
+
+## Pedidos de Gerencia integrados sobre esta base (30/09/2026)
+
+Todo se construyó **encima** del tablero con la imagen real del bus: la ficha técnica (`UnitSheet`) es el destino de cualquier profundización.
+
+- **Selector de unidad de negocio** Todos / Córdoba / Comodoro / San Luis / Villa Mercedes, aplicado a todos los módulos.
+- **Resumen → Tablero de control integral** (`src/g/views/Gerencia.tsx`): 6 grupos de KPI con semáforo y variación, gráficos, indicadores por línea (70-76, A-D, 10-16, 21-23) y 5 alertas gerenciales con acceso al módulo.
+- **Taller**: la vista original queda como pestaña *Taller en vivo* y se suman las pestañas de Gerencia: Resumen general, **Mantenimiento de flota** (plan preventivo/service, pendientes, correctivos realizados, producción por mecánico), Preventivo, Correctivo, Reincidencias, Productividad, Análisis de fallas, Repuestos y gastos, Combustible, Kilómetros y Personal taller. Cada OT, coche, pendiente o reincidencia abre la ficha técnica en esa OT.
+- **Seguridad → Siniestros e Incidentes** (`src/g/views/Siniestros.tsx`): resumen ejecutivo, reincidencia de conductores y unidades, reparación de unidades, seguimiento económico e histórico 12 meses. Cada siniestro que entró a taller es una OT "Siniestro" en el historial del coche, con la zona dañada marcada sobre el bus.
+- **RR.HH.** (resumen mensual y análisis por legajo) y **Tráfico** con acceso en vivo a Micronauta (Córdoba y Comodoro; asistente `public/micronauta-invitado.user.js` para "Entrar como invitado").
+- **Datos unificados**: los indicadores de Gerencia se calculan con la misma flota (163 internos) y las mismas OT de `src/data/fleet.ts`. El plan de mantenimiento por km de cada coche ahora sale de sus OT de preventivo/service. Fecha de corte de la demo: 30/09/2026.
+- **Versión HTML de un solo archivo**: `npm run build:html` → `dist-html/index.html` (se abre con doble clic, sin servidor).

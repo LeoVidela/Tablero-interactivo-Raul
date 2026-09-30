@@ -10,6 +10,16 @@ import { bases, isOpen, now, orders as allOrders, unitById, units } from './data
 import { componentById } from './data/catalog';
 import type { Base, Module, RecordItem } from './data/types';
 import { ago } from './lib/format';
+import logoUrl from './assets/solbus-logo-dark.png';
+import './g/views.css';
+import type { UnitFilter } from './g/data';
+import { UnitSelector } from './g/ui';
+import { OpenUnitCtx } from './g/openUnit';
+import { Gerencia } from './g/views/Gerencia';
+import { TallerView } from './g/views/Taller';
+import { RRHHView } from './g/views/RRHH';
+import { TraficoLive } from './g/views/TraficoLive';
+import { SiniestrosView } from './g/views/Siniestros';
 
 const traffic = [{ time: '06:00', value: 82 }, { time: '08:00', value: 94 }, { time: '10:00', value: 88 }, { time: '12:00', value: 91 }, { time: '14:00', value: 86 }, { time: '16:00', value: 96 }, { time: '18:00', value: 99 }, { time: '20:00', value: 93 }];
 const moduleMeta: Record<Module, { icon: React.ElementType; subtitle: string }> = { Resumen: { icon: LayoutDashboard, subtitle: 'Una mirada completa de la operación' }, Tráfico: { icon: Activity, subtitle: 'Servicios, recorridos y puntualidad' }, Flota: { icon: BusFront, subtitle: 'Disponibilidad y estado de unidades' }, Taller: { icon: Wrench, subtitle: 'Mantenimiento preventivo y correctivo' }, RRHH: { icon: Users, subtitle: 'Dotación, turnos y ausentismo' }, Combustible: { icon: Fuel, subtitle: 'Consumos y rendimiento por base' }, Seguridad: { icon: ShieldCheck, subtitle: 'Incidentes y cumplimiento' } };
@@ -48,7 +58,9 @@ export function App() {
   const [period, setPeriod] = useState('30 días');
   const [sheet, setSheet] = useState<{ unit: string; order?: string; component?: string } | null>(null);
   const openUnit = (unit: string, opts?: { order?: string; component?: string }) => setSheet({ unit, ...opts });
-  const [baseFilter, setBaseFilter] = useState('Todas las bases');
+  const [unit, setUnit] = useState<UnitFilter>('Todos');
+  const baseFilter = unit === 'Todos' ? 'Todas las bases' : unit;
+  const setBaseFilter = (b: string) => setUnit((b === 'Todas las bases' ? 'Todos' : b) as UnitFilter);
   const [query, setQuery] = useState('');
   const [selectedBase, setSelectedBase] = useState<Base | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<RecordItem | null>(null);
@@ -68,9 +80,11 @@ export function App() {
     { label: 'Puntualidad', value: `${average('punctuality').toFixed(1).replace('.', ',')}%`, detail: 'demora media 4 min', icon: Clock3, tone: 'good', action: () => go('Tráfico') },
   ];
 
-  return <div className="app-shell"><div className="ambient ambient-one" /><div className="ambient ambient-two" />
+  const ownHeader = activeModule === 'RRHH' || activeModule === 'Seguridad';
+  const periodic = activeModule === 'Taller' || activeModule === 'Flota';
+  return <OpenUnitCtx.Provider value={openUnit}><div className="app-shell"><div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
-      <div className="brand"><img src="/solbus-logo.svg" alt="Solbus" /></div>
+      <div className="brand"><img src={logoUrl} alt="Solbus" /></div>
       <div className="workspace"><span className="workspace-dot" /> Grupo Solbus <ChevronRight size={14} /></div>
       <p className="nav-title">Operación</p><nav>{(Object.keys(moduleMeta) as Module[]).slice(0, 5).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{item}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}</nav>
       <p className="nav-title second">Gestión</p><nav>{(['Combustible', 'Seguridad'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{item}</span></button>; })}<button className="nav-item" onClick={() => notify('La configuración estará disponible en la siguiente versión')}><Settings2 size={18} /><span>Configuración</span></button></nav>
@@ -78,17 +92,20 @@ export function App() {
     </aside>
     <main className="main-content">
       <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><div className="breadcrumbs"><span>Grupo Solbus</span><ChevronRight size={14} /><strong>{activeModule}</strong></div><div className="top-actions"><div className="search"><Search size={16} /><input placeholder="Buscar interno, OT, mecánico..." value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="notification-wrap"><button className="icon-button notification" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><i /></button>{showNotifications && <div className="notification-pop"><strong>Notificaciones</strong><span>{allOrders.filter((o) => isOpen(o) && o.priority === 'Alta').length} OT de prioridad alta en taller</span><button onClick={() => { go('Taller'); setShowNotifications(false); }}>Ver alertas <ChevronRight size={14} /></button></div>}</div><div className="top-avatar">LV</div></div></header>
-      <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : activeModule}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions"><div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div><button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>
-      <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Período <strong>{period}</strong></div><select value={baseFilter} onChange={(e) => setBaseFilter(e.target.value)}><option>Todas las bases</option>{bases.map((b) => <option key={b.name}>{b.name}</option>)}</select>{baseFilter !== 'Todas las bases' && <button className="clear-filter" onClick={() => setBaseFilter('Todas las bases')}>Limpiar filtros <X size={13} /></button>}</div>
+      {!ownHeader && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : activeModule}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions">{periodic && <div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => notify('Reporte preparado: la descarga comenzará en breve')}><Download size={15} /> Exportar</button></div></section>}
+      <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Unidad de negocio <strong>{unit === 'Todos' ? 'Todas' : unit}</strong>{periodic && <> · Período <strong>{period}</strong></>}</div><UnitSelector value={unit} onChange={setUnit} /></div>
       {activeModule === 'Resumen' ? <>
-        <section className="metrics-grid">{metrics.map((metric, index) => <motion.button initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .07 }} whileHover={{ y: -4 }} className="metric-card" key={metric.label} onClick={metric.action}><div className="metric-top"><span className="metric-icon"><metric.icon size={18} /></span><span className={`change ${metric.tone}`}>{index === 1 ? '-1,8%' : '+2,4%'}</span></div><span className="metric-label">{metric.label}</span><strong>{metric.value}</strong><span className="metric-description">{metric.detail}<ArrowUpRight size={13} /></span></motion.button>)}</section>
-        <section className="dashboard-grid"><div className="panel chart-panel"><div className="panel-heading"><div><span className="section-kicker">Rendimiento operativo</span><h2>El pulso de tu servicio</h2></div><span className="live-label"><span /> En vivo</span></div><div className="chart-legend"><span><i className="legend-purple" /> Cumplimiento</span><span><i className="legend-cyan" /> Meta 92%</span></div><div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={traffic}><defs><linearGradient id="pulseGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ff6b1a" stopOpacity={.35} /><stop offset="100%" stopColor="#ff6b1a" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="rgba(255,255,255,.06)" /><XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#7f8aa3', fontSize: 11 }} /><YAxis domain={[70, 105]} axisLine={false} tickLine={false} tick={{ fill: '#7f8aa3', fontSize: 11 }} tickFormatter={(v) => `${v}%`} /><Tooltip contentStyle={{ background: '#151a2b', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, color: '#fff' }} formatter={(v) => [`${v}%`, 'Cumplimiento']} /><Area type="monotone" dataKey="value" stroke="#ff8a4c" strokeWidth={3} fill="url(#pulseGradient)" dot={false} activeDot={{ r: 5, fill: '#fff', stroke: '#ff6b1a', strokeWidth: 3 }} /></AreaChart></ResponsiveContainer></div></div><FleetPanel onOpen={() => go('Flota')} /></section>
+        <Gerencia unit={unit} setUnit={setUnit} go={(m) => go(m)} notify={notify} onRecord={(r) => setSelectedRecord(r)} />
         <section className="section-header"><div><span className="section-kicker">Visión por ubicación</span><h2>Las bases operativas</h2></div><button className="text-button" onClick={() => notify('Comparativa lista para seleccionar una base')}>Ver comparativa <ArrowUpRight size={15} /></button></section><section className="base-grid">{filteredBases.map((base) => <BaseCard base={base} onClick={() => setSelectedBase(base)} key={base.code} />)}</section>
         <section className="bottom-row"><Alerts onSelect={(record) => record.unit ? openUnit(record.unit, { order: record.ot }) : setSelectedRecord(record)} /><div className="panel insight-panel"><div className="insight-icon"><Sparkles size={18} /></div><span className="section-kicker">Pulse insight</span><h2>Una oportunidad detectada</h2><p>Villa Mercedes mejoró su puntualidad <strong>+4,8%</strong> esta semana. El turno tarde es el principal impulsor.</p><button className="insight-button" onClick={() => { setBaseFilter('Villa Mercedes'); go('Tráfico'); }}>Explorar señal <ArrowUpRight size={15} /></button></div></section>
-      </> : activeModule === 'Taller' ? <Taller baseFilter={baseFilter} query={query} period={period} onOpenUnit={openUnit} /> : activeModule === 'Flota' ? <Flota baseFilter={baseFilter} query={query} onOpenUnit={openUnit} /> : <ModuleView module={activeModule} bases={filteredBases} records={visibleRecords} onBase={setSelectedBase} onRecord={(r) => r.unit ? openUnit(r.unit, { order: r.ot }) : setSelectedRecord(r)} />}
+      </> : activeModule === 'Taller' ? <TallerView unit={unit} notify={notify} live={<Taller baseFilter={baseFilter} query={query} period={period} onOpenUnit={openUnit} />} />
+        : activeModule === 'Flota' ? <Flota baseFilter={baseFilter} query={query} onOpenUnit={openUnit} />
+        : activeModule === 'RRHH' ? <RRHHView unit={unit} notify={notify} />
+        : activeModule === 'Seguridad' ? <SiniestrosView unit={unit} notify={notify} />
+        : <>{activeModule === 'Tráfico' && <TraficoLive unit={unit} notify={notify} />}<ModuleView module={activeModule} bases={filteredBases} records={visibleRecords} onBase={setSelectedBase} onRecord={(r) => r.unit ? openUnit(r.unit, { order: r.ot }) : setSelectedRecord(r)} /></>}
     </main>
     <AnimatePresence>{selectedBase && <BaseDrawer base={selectedBase} onClose={() => setSelectedBase(null)} onModule={go} />}{selectedRecord && <RecordDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} />}{sheet && <UnitSheet key={sheet.unit + (sheet.order ?? '')} unit={unitById[sheet.unit]} initialOrder={sheet.order} initialComponent={sheet.component} onClose={() => setSheet(null)} />}</AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="toast"><CheckCircle2 size={17} /> {toast}</motion.div>}
-  </div>;
+  </div></OpenUnitCtx.Provider>;
 }
 
 function FleetPanel({ onOpen }: { onOpen: () => void }) { return <div className="panel fleet-panel"><div className="panel-heading"><div><span className="section-kicker">Disponibilidad</span><h2>Estado de flota</h2></div><button className="round-action" onClick={onOpen}><ArrowUpRight size={16} /></button></div><div className="fleet-summary"><div className="fleet-ring"><div><strong>{fleetTotals.total}</strong><span>unidades</span></div></div><div className="fleet-legend"><span><i className="dot purple" /> Operativa <b>{Math.round(fleetTotals.op / fleetTotals.total * 100)}%</b></span><span><i className="dot orange" /> En taller <b>{Math.round(fleetTotals.shop / fleetTotals.total * 100)}%</b></span><span><i className="dot red" /> Fuera de servicio <b>{Math.round(fleetTotals.out / fleetTotals.total * 100)}%</b></span></div></div></div>; }
