@@ -16,7 +16,7 @@ export function Tile({ icon: Icon, label, value, sub, color, children }: { icon:
 }
 export function Donut({ data, center, sub }: { data: { name: string; value: number; color: string }[]; center: string; sub?: string }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
-  return <div className="t-donut"><div className="t-donut-chart"><PieChart width={150} height={150}><Pie data={data} dataKey="value" innerRadius="66%" outerRadius="94%" paddingAngle={2} stroke="none" animationDuration={550} startAngle={90} endAngle={-270}>{data.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, n: string) => [`${fmt(v)} (${fmt((v / total) * 100, 1)}%)`, n]} /></PieChart><div className="t-donut-center"><strong>{center}</strong>{sub && <span>{sub}</span>}</div></div>
+  return <div className="t-donut"><div className="t-donut-chart"><PieChart width={150} height={150}><Pie data={data} dataKey="value" innerRadius="66%" outerRadius="94%" paddingAngle={2} stroke="none" isAnimationActive={false} startAngle={90} endAngle={-270}>{data.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, n: string) => [`${fmt(v)} (${fmt((v / total) * 100, 1)}%)`, n]} /></PieChart><div className="t-donut-center"><strong>{center}</strong>{sub && <span>{sub}</span>}</div></div>
     <ul className="t-legend">{data.map((d) => <li key={d.name}><i style={{ background: d.color }} />{d.name}<b>{fmt(d.value)}</b><em>{fmt((d.value / total) * 100, 1)}%</em></li>)}</ul></div>;
 }
 function arc(cx: number, cy: number, r: number, a0: number, a1: number) {

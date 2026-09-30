@@ -126,33 +126,9 @@
 .pill.unit i{width:8px;height:8px;border-radius:50%}
 .ghost-button{padding:9px 13px;border-radius:9px;background:rgba(255,255,255,.07);color:#e5e7ef;font-size:11px;font-weight:600}.ghost-button:hover{background:rgba(255,255,255,.12)}
 
-/* ---------- Ficha del coche ---------- */
+/* ---------- modales (detalle de siniestro / conductor) ---------- */
 .bus-backdrop{display:grid;place-items:start center;overflow-y:auto;padding:22px 16px}
-.bus-modal{width:min(1240px,100%);margin:auto;padding:22px;border-radius:22px;background:linear-gradient(160deg,#121729,#0b0f1c);border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 120px #000b}
-.bus-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-.bus-id{display:flex;align-items:center;gap:14px}
 .bus-int{display:grid;place-items:center;min-width:66px;height:66px;padding:0 8px;border-radius:16px;background:linear-gradient(135deg,#ff6b1a,#c2410c);font:700 26px 'Space Grotesk';box-shadow:0 10px 26px #ff6b1a44}
-.bus-id h2{margin:5px 0 0;font:600 clamp(20px,2.2vw,28px) 'Space Grotesk';letter-spacing:-1px}.bus-id h2 small{font:500 14px 'DM Sans';color:#7f8aa3;letter-spacing:0;margin-left:6px}
-.bus-badges{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
-.bus-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(320px,1fr);gap:18px}
-.bus-stage{position:relative;border-radius:18px;border:1px solid rgba(255,255,255,.09);background:radial-gradient(ellipse at 50% 35%,#1a2544 0%,#0b1020 72%);overflow:hidden;padding:26px 8px 44px;perspective:1300px}
-.bus-stage-grid{position:absolute;inset:38% 0 0;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:36px 36px;-webkit-mask-image:linear-gradient(transparent,#000 85%);mask-image:linear-gradient(transparent,#000 85%);transform:perspective(500px) rotateX(58deg);transform-origin:50% 0}
-.bus-tilt{position:relative;transform-style:preserve-3d;will-change:transform}
-.bus-svg{width:100%;height:auto;display:block;filter:drop-shadow(0 22px 26px #0009);overflow:visible}
-.bus-pin circle{transition:r .15s}.bus-pin:hover circle:nth-child(2){fill-opacity:.9;stroke:#fff}
-.bus-stage-hint{position:absolute;left:14px;bottom:12px;display:flex;align-items:center;gap:6px;color:#7f8aa3;font-size:11px}
-.bus-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
-.bus-facts div{padding:11px 13px;border-radius:12px;background:rgba(255,255,255,.04);display:flex;flex-direction:column;gap:3px}.bus-facts span{color:#7f8aa3;font-size:10px;text-transform:uppercase;letter-spacing:.5px}.bus-facts b{font-size:13px}
-.bus-ot{padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:12px;min-width:0}
-.bus-ot-head{display:flex;justify-content:space-between;align-items:start;gap:10px}.bus-ot-head h3{margin:5px 0 0;font:600 18px 'Space Grotesk'}
-.bus-problem{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0;padding:11px 13px;border-radius:12px;border-left:4px solid #ff6b1a;background:rgba(255,107,26,.08);font-size:13px;font-weight:600}.bus-problem em{font-style:normal;font-weight:400;color:#ffb27f;font-size:11.5px;margin-left:auto}
-.bus-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11.5px;color:#a9b2c6}.bus-meta span{display:flex;align-items:center;gap:6px}.bus-meta svg{color:#ff8a4c}
-.bus-mat-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#e5e7ef;margin-top:4px}.bus-mat-title svg{color:#ff8a4c}
-.bus-mat td{white-space:normal}
-.bus-costs{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);font-size:12px}.bus-costs div{display:flex;justify-content:space-between;color:#a9b2c6}.bus-costs b{color:#fff}.bus-costs .total{font-size:14px;color:#fff;font-weight:700;padding-top:6px}.bus-costs .total b{color:#ff9a63;font-size:16px}
-.bus-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
-.bus-history{margin-top:18px;padding:16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
-.bus-history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.bus-history-head h3{margin:0;font:600 15px 'Space Grotesk'}.bus-history-head em{font-style:normal;color:#ffb27f}
 
 /* ---------- RR.HH. ---------- */
 .rh-section{margin:8px 0 0;font:600 15px 'Space Grotesk';letter-spacing:-.3px;color:#e5e7ef}
@@ -184,7 +160,7 @@
 
 /* ---------- Tráfico en vivo (Micronauta) ---------- */
 .live-panel{margin-bottom:6px}
-.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .live-card{position:relative;overflow:hidden;padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(150deg,rgba(27,32,51,.92),rgba(12,16,28,.95));display:flex;flex-direction:column;gap:14px}
 .live-card::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:var(--tone)}
 .live-card.off{opacity:.72}
@@ -255,3 +231,10 @@
 @media(max-width:1350px){.t-kpis.six{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1500px){.siniestros .sn-grid-2{grid-template-columns:1fr}}
 @media(max-width:560px){.t-kpis.six{grid-template-columns:1fr 1fr}}
+
+/* ---------- integración con la base ---------- */
+.t-tabbar{display:flex;align-items:flex-end;gap:14px;border-bottom:1px solid rgba(255,255,255,.08);flex-wrap:wrap}
+.t-tabbar .t-tabs{border-bottom:0;flex:1;min-width:0}
+.t-tabbar .g-select{margin-bottom:6px}
+.taller>.panel,.taller>section{min-width:0}
+.filterbar .unit-selector{margin-left:auto}

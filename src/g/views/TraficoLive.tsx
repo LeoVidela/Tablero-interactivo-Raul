@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowUpRight, Download, ExternalLink, Radio, Users, Route, BusFront, Gauge, WifiOff } from 'lucide-react';
 import { UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName, aggregate } from '../data';
 import { fmt, pct } from '../ui';
-import userscript from '../../public/micronauta-invitado.user.js?raw';
+import userscript from '../../../public/micronauta-invitado.user.js?raw';
 
 const scriptUrl = URL.createObjectURL(new Blob([userscript], { type: 'text/javascript' }));
 

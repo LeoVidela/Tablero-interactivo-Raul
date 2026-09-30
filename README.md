@@ -14,6 +14,26 @@ Abrir `http://localhost:5173`.
 
 ## Funcionalidad demo
 
+### Taller (nuevo)
+
+- Mapa de intervenciones de la flota sobre la imagen del bus Solbus: cada zona del coche muestra cuántas veces se intervino en el período y cuánto costaron los materiales. Se puede ver en corte lateral o como chasis y despiece.
+- Ranking de componentes más intervenidos, OT por mes (preventivo/service, correctivo, auxilio/siniestro) y costo de materiales por base.
+- Tablero de coches detenidos: ingresadas, en reparación y esperando repuesto.
+- Registro de órdenes de trabajo filtrable por tipo, componente y búsqueda, y ranking de materiales de pañol.
+
+### Ficha técnica por coche
+
+- Se abre desde Taller, Flota o las alertas del resumen.
+- El bus es la imagen central: al elegir una OT se marcan en el bus las piezas o áreas intervenidas; al tocar una zona se ve el historial de esa pieza y los materiales usados en ella.
+- Detalle de cada OT con diagnóstico, mecánico, horas hombre, km al ingreso y materiales consumidos (código de pañol, cantidad, precio e importe).
+- Plan de mantenimiento: service cada 30.000 km y preventivo cada 20.000 km, con avisos de vencido.
+
+### Flota
+
+- Grilla de internos por base (Córdoba 501–581, Comodoro 1001–1024, San Luis 2001–2032, Villa Mercedes 3001–3026) con estado por letra y color.
+
+### General
+
 - Logo Solbus integrado en `public/solbus-logo.svg`.
 - Módulos navegables: Resumen, Tráfico, Flota, Taller, RRHH, Combustible y Seguridad.
 - Filtro por base y búsqueda global.
@@ -25,19 +45,16 @@ Abrir `http://localhost:5173`.
 - Alertas, notificaciones, exportación simulada y mensajes de feedback.
 - Responsive para escritorio, tablet y móvil.
 
-Los datos se encuentran en `src/main.tsx` como dataset de demostración. En la siguiente etapa se pueden reemplazar por endpoints de una API y autenticación por roles.
+Los datos son ficticios y se generan de forma determinística en `src/data/` (`fleet.ts` para unidades y OT, `catalog.ts` para componentes del bus, ubicación de cada zona sobre las imágenes y catálogo de pañol). En la siguiente etapa se pueden reemplazar por endpoints de una API y autenticación por roles.
 
+## Pedidos de Gerencia integrados sobre esta base (30/09/2026)
 
-## Novedades: pedido de Gerencia (30/09/2026)
+Todo se construyó **encima** del tablero con la imagen real del bus: la ficha técnica (`UnitSheet`) es el destino de cualquier profundización.
 
-- **Resumen = Tablero de control integral**: 6 grupos de indicadores (Operación, Flota, RR.HH., Seguridad, Económico, Demanda) con semáforo vs. objetivo y variación vs. período anterior, 3 gráficos, tabla por línea y 5 alertas dinámicas. Selector global **Todos · Córdoba · Comodoro · San Luis · Villa Mercedes** y selector de período (trimestres y meses).
-- **Taller & Mantenimiento**: 10 pestañas (Resumen general, Preventivo, Correctivo, Reincidencias, Productividad, Análisis de fallas, Repuestos y gastos, Combustible, Kilómetros, Personal taller). Al tocar una OT, unidad o preventivo se abre la **ficha del coche** con el bus marcando la zona intervenida, materiales usados, costos e historial.
-- **RR.HH.**: resumen mensual por área + análisis individual por legajo.
-- **Tráfico**: acceso a la flota en tiempo real de Micronauta (Comodoro y Córdoba). `public/micronauta-invitado.user.js` (Tampermonkey) acciona "Entrar como invitado" automáticamente.
-- Datos demo determinísticos en `src/data.ts`, `src/taller.ts` y `src/rrhh.ts`.
-
-## Novedades: Siniestros y Mantenimiento de flota (30/09/2026)
-- **Seguridad → Siniestros e Incidentes** (`src/siniestros.ts`, `src/views/Siniestros.tsx`): resumen ejecutivo, reincidencia de conductores y unidades, seguimiento de reparaciones (pendientes del mes / meses anteriores con antigüedad, en reparación, reparadas), seguimiento económico (seguro, gestión interna, terceros, reclamos) e histórico de 12 meses por conductor. Respeta el selector de unidad; conductores y reclamos abren su detalle y los internos abren la ficha del coche.
-- **Taller → Mantenimiento de flota** (`src/mant.ts`, `src/views/Mantenimiento.tsx`): plan de preventivos y services, pendientes y vencidos +30 días, evolución 6 meses, pendientes acumulados, correctivos realizados y producción individual (también en *Personal taller*).
-- La ficha del coche ahora incluye también los siniestros del coche en su historial.
-- **Versión HTML de un solo archivo**: `npm run build:html` → `dist-html/index.html` (se abre con doble clic, sin servidor ni internet).
+- **Selector de unidad de negocio** Todos / Córdoba / Comodoro / San Luis / Villa Mercedes, aplicado a todos los módulos.
+- **Resumen → Tablero de control integral** (`src/g/views/Gerencia.tsx`): 6 grupos de KPI con semáforo y variación, gráficos, indicadores por línea (70-76, A-D, 10-16, 21-23) y 5 alertas gerenciales con acceso al módulo.
+- **Taller**: la vista original queda como pestaña *Taller en vivo* y se suman las pestañas de Gerencia: Resumen general, **Mantenimiento de flota** (plan preventivo/service, pendientes, correctivos realizados, producción por mecánico), Preventivo, Correctivo, Reincidencias, Productividad, Análisis de fallas, Repuestos y gastos, Combustible, Kilómetros y Personal taller. Cada OT, coche, pendiente o reincidencia abre la ficha técnica en esa OT.
+- **Seguridad → Siniestros e Incidentes** (`src/g/views/Siniestros.tsx`): resumen ejecutivo, reincidencia de conductores y unidades, reparación de unidades, seguimiento económico e histórico 12 meses. Cada siniestro que entró a taller es una OT "Siniestro" en el historial del coche, con la zona dañada marcada sobre el bus.
+- **RR.HH.** (resumen mensual y análisis por legajo) y **Tráfico** con acceso en vivo a Micronauta (Córdoba y Comodoro; asistente `public/micronauta-invitado.user.js` para "Entrar como invitado").
+- **Datos unificados**: los indicadores de Gerencia se calculan con la misma flota (163 internos) y las mismas OT de `src/data/fleet.ts`. El plan de mantenimiento por km de cada coche ahora sale de sus OT de preventivo/service. Fecha de corte de la demo: 30/09/2026.
+- **Versión HTML de un solo archivo**: `npm run build:html` → `dist-html/index.html` (se abre con doble clic, sin servidor).

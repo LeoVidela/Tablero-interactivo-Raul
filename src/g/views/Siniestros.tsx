@@ -5,10 +5,10 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { AlertTriangle, BusFront, CalendarDays, CheckCircle2, ChevronRight, Download, HandCoins, HeartPulse, MapPin, ShieldAlert, ShieldCheck, Siren, UserRound, Users, Wrench, X } from 'lucide-react';
 import { MONTH_FULL, MONTH_LABELS, UNIT_COLOR, UnitFilter } from '../data';
 import { AXIS, GRID, Panel, TOOLTIP_STYLE, fmt, pct } from '../ui';
-import { Bus, OT } from '../taller';
-import { DriverRow, Repair, RepEstado, Siniestro, allIncidentes, driverEvents, driverHistory, fmtMoney, repairState, siniestroOT, sinData } from '../siniestros';
+import { Bus } from '../taller';
+import { useOpenUnit } from '../openUnit';
+import { DriverRow, Repair, RepEstado, Siniestro, driverEvents, driverHistory, fmtMoney, repairState, sinData } from '../siniestros';
 import { Bars, C, Donut, TD, Tile } from './shared';
-import { BusModal } from './BusModal';
 
 const TABS = ['Resumen ejecutivo', 'Reincidencia', 'Reparación de unidades', 'Seguimiento económico', 'Histórico de conductores'] as const;
 type Tab = (typeof TABS)[number];
@@ -24,16 +24,15 @@ export function SiniestrosView({ unit, notify }: { unit: UnitFilter; notify: (m:
   const [repF, setRepF] = useState<'Todas' | RepEstado>('Todas');
   const [claimF, setClaimF] = useState<'Todos' | 'Abiertos' | 'Cobrados'>('Todos');
   const [showAll, setShowAll] = useState(false);
-  const [bus, setBus] = useState<{ bus: Bus; ot?: OT } | null>(null);
+  const openUnit = useOpenUnit();
   const [detail, setDetail] = useState<Detail>(null);
   const d = useMemo(() => sinData(unit, m), [unit, m]);
   const prev = useMemo(() => (m > 0 ? sinData(unit, m - 1) : null), [unit, m]);
   const hist = useMemo(() => driverHistory(unit), [unit]);
   const monthly = useMemo(() => MONTH_LABELS.map((lb, i) => { const x = sinData(unit, i); return { m: lb, siniestros: x.events.length, incidentes: x.incs.length }; }), [unit]);
   const pMonth = MONTH_FULL[m];
-  const openBus = (b: Bus, ot?: OT) => setBus({ bus: b, ot });
-  const openSin = (s: Siniestro) => openBus(s.bus, siniestroOT(s, m));
-  const openRep = (r: Repair) => openBus(r.s.bus, siniestroOT(r.s, m));
+  const openBus = (b: Bus, component?: string, order?: string) => openUnit(b.id, { component, order });
+  const openRep = (r: Repair) => { if (!r.s.orderId) notify(`Interno ${r.s.bus.interno}: el daño (${r.s.damage.toLowerCase()}) todavía no ingresó a taller`); openBus(r.s.bus, r.s.anchor, r.s.orderId); };
   const nInc = d.incs.length; const nSin = d.events.length;
 
   const Tiles = () => <section className="t-kpis six">
@@ -55,7 +54,7 @@ export function SiniestrosView({ unit, notify }: { unit: UnitFilter; notify: (m:
   </ul></Panel>;
 
   const Evol = () => <Panel kicker="12 meses" title="Siniestros e incidentes por mes"><div className="g-chart-box short"><ResponsiveContainer width="100%" height="100%"><BarChart data={monthly} margin={{ top: 8, right: 4, left: -18, bottom: 0 }} onClick={(e) => { const i = MONTH_LABELS.indexOf(String(e?.activeLabel)); if (i >= 0) setM(i); }}><CartesianGrid vertical={false} stroke={GRID} /><XAxis dataKey="m" axisLine={false} tickLine={false} tick={AXIS} /><YAxis axisLine={false} tickLine={false} tick={AXIS} allowDecimals={false} /><Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,.04)' }} />
-    <Bar dataKey="siniestros" name="Siniestros" fill={C.red} radius={[4, 4, 0, 0]} /><Bar dataKey="incidentes" name="Incidentes" fill={C.amber} radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div><p className="sn-foot">Tocá un mes para ver su detalle.</p></Panel>;
+    <Bar dataKey="siniestros" name="Siniestros" fill={C.red} radius={[4, 4, 0, 0]} isAnimationActive={false} /><Bar dataKey="incidentes" name="Incidentes" fill={C.amber} radius={[4, 4, 0, 0]} isAnimationActive={false} /></BarChart></ResponsiveContainer></div><p className="sn-foot">Tocá un mes para ver su detalle.</p></Panel>;
 
   const Conductores = ({ n = 5 }: { n?: number } = {}) => <Panel kicker="Reincidencia y comparación" title="Conductores · reincidencia y comparación" right={<span className="sn-hint">El período anterior permite identificar repetición y evolución</span>}>
     <div className="g-table-wrap tall"><table className="g-table clickable"><thead><tr><th>Chofer</th><th>Sin. mes</th><th>Inc. mes</th><th>Total</th><th>Per. anterior</th><th>Acum. 6 m</th><th>Resp.</th><th>Sanción</th><th>Estado</th></tr></thead>
@@ -129,15 +128,14 @@ export function SiniestrosView({ unit, notify }: { unit: UnitFilter; notify: (m:
     </section>
     <nav className="t-tabs" role="tablist">{TABS.map((t) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>)}</nav>
 
-    {tab === 'Resumen ejecutivo' && <>{Tiles()}<section className="t-grid-3 wide">{Responsabilidad()}{Estado()}{Alertas()}</section>{Conductores()}<section className="t-grid-2">{Evol()}</section></>}
+    {tab === 'Resumen ejecutivo' && <>{Tiles()}<section className="t-grid-3 wide">{Responsabilidad()}{Estado()}{Alertas()}</section>{Conductores()}{Evol()}</>}
     {tab === 'Reincidencia' && <>{Tiles()}{Conductores({ n: 10 })}{Rankings()}</>}
     {tab === 'Reparación de unidades' && <>{Tiles()}<section className="t-grid-3 wide">{Estado()}{Responsabilidad()}{Alertas()}</section>{Reparaciones()}</>}
     {tab === 'Seguimiento económico' && Eco()}
     {tab === 'Histórico de conductores' && Hist()}
 
     <p className="t-note"><ShieldAlert size={13} /> Datos demostrativos · modelo de reporte de Gerencia. Tocá un conductor, un interno o un reclamo para ver su detalle y abrir la ficha del coche.</p>
-    <AnimatePresence>{bus && <BusModal key={bus.bus.id + (bus.ot?.id ?? '')} bus={bus.bus} ot={bus.ot} onClose={() => setBus(null)} notify={notify} />}</AnimatePresence>
-    <AnimatePresence>{detail && <DetailModal detail={detail} m={m} onClose={() => setDetail(null)} onBus={(b, s) => { setDetail(null); openBus(b, s ? siniestroOT(s, m) : undefined); }} onDriver={(dr) => setDetail({ kind: 'driver', d: dr })} />}</AnimatePresence>
+    <AnimatePresence>{detail && <DetailModal detail={detail} m={m} onClose={() => setDetail(null)} onBus={(b, s) => { setDetail(null); openBus(b, s?.anchor, s?.orderId); }} onDriver={(dr) => setDetail({ kind: 'driver', d: dr })} />}</AnimatePresence>
   </div>;
 }
 

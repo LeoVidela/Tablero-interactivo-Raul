@@ -1,3 +1,4 @@
+import { mechanicsByBase, orders as ALL_ORDERS, units as ALL_UNITS, PREVENTIVE_KM, SERVICE_KM } from '../data/fleet';
 // Dataset de demostración de Grupo Solbus (4 unidades de negocio, 12 meses: oct-2025 → sep-2026).
 // Todo es determinístico (PRNG con semilla) para que los números sean coherentes entre Gerencia, Tráfico, Taller y RRHH.
 
@@ -5,7 +6,8 @@ export const UNIT_NAMES = ['Córdoba', 'Comodoro', 'San Luis', 'Villa Mercedes']
 export type UnitName = (typeof UNIT_NAMES)[number];
 export type UnitFilter = 'Todos' | UnitName;
 export const UNIT_FILTERS: UnitFilter[] = ['Todos', ...UNIT_NAMES];
-export const UNIT_COLOR: Record<UnitName, string> = { 'Córdoba': '#ff6b1a', Comodoro: '#22d3ee', 'San Luis': '#34d399', 'Villa Mercedes': '#f59e0b' };
+// Colores y flota tomados de la base del tablero (data/fleet.ts): mismos internos, mismas OT.
+export const UNIT_COLOR: Record<UnitName, string> = { 'Córdoba': '#E85818', Comodoro: '#199e70', 'San Luis': '#c98500', 'Villa Mercedes': '#d55181' };
 export const UNIT_CODE: Record<UnitName, string> = { 'Córdoba': 'COR', Comodoro: 'COM', 'San Luis': 'SLU', 'Villa Mercedes': 'VME' };
 
 export const MONTH_LABELS = ['Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep'];
@@ -51,7 +53,7 @@ const PROFILES: Record<UnitName, Profile> = {
   'San Luis': { seed: 3303, fleet: 72, kmBus: 4700, cumpl: 98.1, trend: 0.02, reg: 98.0, outPct: 6.9, aus: 5.0, cob: 98.4, sin: 1.4, exc: 4, aux: 0.8, cost: 24.1, inc: 51.6, ipk: 1.44, kmpl: 3.1, obj: { sin: 4, exc: 12, aux: 2 } },
   'Villa Mercedes': { seed: 4404, fleet: 86, kmBus: 4500, cumpl: 97.4, trend: 0.0, reg: 97.2, outPct: 14, aus: 6.4, cob: 97.6, sin: 2.3, exc: 10.5, aux: 1.9, cost: 26.8, inc: 49.8, ipk: 1.36, kmpl: 2.95, obj: { sin: 5, exc: 15, aux: 3 } },
 };
-export const FLEET_SIZE: Record<UnitName, number> = { 'Córdoba': 126, Comodoro: 84, 'San Luis': 72, 'Villa Mercedes': 86 };
+export const FLEET_SIZE = Object.fromEntries(UNIT_NAMES.map((u) => [u, ALL_UNITS.filter((x) => x.base === u).length])) as Record<UnitName, number>;
 
 export const OBJ = { km: 98, reg: 98, disp: 90, aus: 6, cob: 98, cost: 23 };
 
@@ -64,7 +66,9 @@ export interface MonthRow {
 const SEASON_KM = [0, 0.01, -0.03, -0.05, -0.06, 0.02, 0.01, 0.02, 0, -0.03, 0.02, 0.03];
 
 function genUnit(unit: UnitName): MonthRow[] {
-  const p = PROFILES[unit];
+  const p0 = PROFILES[unit]; const fs = FLEET_SIZE[unit] / p0.fleet;
+  const realOut = (ALL_UNITS.filter((x) => x.base === unit && x.status !== 'Operativo').length / FLEET_SIZE[unit]) * 100;
+  const p = { ...p0, fleet: FLEET_SIZE[unit], outPct: realOut * 0.92 }; void fs; // siniestros/excesos/auxilios se mantienen en valores absolutos del modelo de Gerencia
   const r = mulberry32(p.seed);
   const n = () => r() * 2 - 1;
   const rows: MonthRow[] = [];
@@ -100,6 +104,47 @@ function genUnit(unit: UnitName): MonthRow[] {
 export const DATA: Record<UnitName, MonthRow[]> = {
   'Córdoba': genUnit('Córdoba'), Comodoro: genUnit('Comodoro'), 'San Luis': genUnit('San Luis'), 'Villa Mercedes': genUnit('Villa Mercedes'),
 };
+
+// ---------- sincronización con las OT reales de la base ----------
+/** Índice de mes (0 = oct-2025 … 11 = sep-2026) de una fecha. */
+export const monthIdx = (d: Date) => (d.getFullYear() - 2025) * 12 + d.getMonth() - 9;
+export const monthStart = (m: number) => new Date(2025, 9 + m, 1);
+export const monthEndDate = (m: number) => new Date(2025, 9 + m + 1, 0, 23, 59, 59);
+export const isPlanOrder = (o: { title: string }) => o.title === 'Preventivo 20.000 km' || o.title === 'Service 30.000 km';
+/** Coches con preventivo o service vencido / por vencer (a la fecha de corte). */
+export const dueCount = (u: UnitName) => ALL_UNITS.filter((x) => x.base === u).reduce((n, x) => n + (x.km - x.lastPreventiveKm >= PREVENTIVE_KM ? 1 : 0) + (x.km - x.lastServiceKm >= SERVICE_KM ? 1 : 0), 0);
+for (const u of UNIT_NAMES) {
+  const ords = ALL_ORDERS.filter((o) => o.base === u);
+  const list = ALL_UNITS.filter((x) => x.base === u);
+  const seen = new Map<string, Date[]>();
+  const reincByMonth = Array(12).fill(0); const reincSeen = new Set<string>();
+  [...ords].filter((o) => !isPlanOrder(o)).sort((a, b) => a.opened.getTime() - b.opened.getTime()).forEach((o) => {
+    for (const c of o.components) {
+      const k = `${o.unit}|${c}`; const prev = seen.get(k) ?? [];
+      if (prev.some((d) => o.opened.getTime() - d.getTime() <= 90 * 86400000)) { const mi = monthIdx(o.opened); const mk = `${mi}|${k}`; if (mi >= 0 && mi < 12 && !reincSeen.has(mk)) { reincSeen.add(mk); reincByMonth[mi]++; } }
+      prev.push(o.opened); seen.set(k, prev);
+    }
+  });
+  DATA[u].forEach((row, m) => {
+    const end = monthEndDate(m).getTime(); const start = monthStart(m).getTime();
+    const closed = ords.filter((o) => o.closed && o.closed.getTime() >= start && o.closed.getTime() <= end);
+    row.otClosed = closed.length;
+    row.otOpen = ords.filter((o) => o.opened.getTime() <= end && (!o.closed || o.closed.getTime() > end)).length;
+    row.prevDone = closed.filter(isPlanOrder).length;
+    row.prevPend = 0; // se completa abajo con la relación real del mes de corte
+    row.reinc = reincByMonth[m];
+    row.repTime = closed.length ? closed.reduce((s, o) => s + o.hours, 0) / closed.length : row.repTime;
+    row.personal = mechanicsByBase[u].length;
+    row.horas = Math.round(closed.reduce((s, o) => s + o.hours, 0));
+  });
+  const r11 = dueCount(u) / Math.max(1, DATA[u][11].prevDone);
+  DATA[u].forEach((row, m) => { row.prevPend = m === 11 ? dueCount(u) : Math.round(row.prevDone * r11 * (0.8 + ((m * 7) % 5) * 0.08)); });
+  const open11 = DATA[u][11].otOpen;
+  DATA[u].forEach((row, m) => { if (m < 11) row.otOpen = Math.max(1, Math.round(open11 * (0.78 + ((m * 5) % 7) * 0.05))); }); // OT abiertas al cierre de meses anteriores (la base sólo conserva el estado actual)
+  const last = DATA[u][11];
+  last.enRep = list.filter((x) => x.status === 'En taller').length; last.espRep = list.filter((x) => x.status === 'Esperando repuesto').length; last.fuera = list.filter((x) => x.status === 'Fuera de servicio').length;
+  last.out = last.enRep + last.espRep + last.fuera; last.oper = last.total - last.out; last.disp = (last.oper / last.total) * 100;
+}
 
 export const unitsOf = (f: UnitFilter): UnitName[] => (f === 'Todos' ? [...UNIT_NAMES] : [f]);
 
@@ -165,17 +210,17 @@ export const PERIODS: PeriodDef[] = [
 interface LineDef { id: string; w: number; off: number; ipk: number; sw: number; ew: number }
 const LINES: Record<UnitName, LineDef[]> = {
   'Córdoba': [
-    { id: '20', w: 22, off: 0.4, ipk: 0.05, sw: 1.2, ew: 1.0 }, { id: '21', w: 18, off: -0.2, ipk: -0.03, sw: 1, ew: 1.1 }, { id: '30', w: 16, off: 0.5, ipk: 0.08, sw: 0.7, ew: 0.6 },
-    { id: '31', w: 14, off: -0.6, ipk: -0.06, sw: 1.5, ew: 1.7 }, { id: '40', w: 12, off: 0.1, ipk: 0, sw: 0.8, ew: 0.9 }, { id: '50', w: 10, off: -0.3, ipk: -0.04, sw: 1, ew: 1.2 }, { id: '60', w: 8, off: 0.2, ipk: 0.02, sw: 0.6, ew: 0.5 },
+    { id: '70', w: 18, off: 0.4, ipk: 0.05, sw: 1.2, ew: 1.0 }, { id: '71', w: 16, off: -0.2, ipk: -0.03, sw: 1, ew: 1.1 }, { id: '72', w: 15, off: 0.5, ipk: 0.08, sw: 0.7, ew: 0.6 },
+    { id: '73', w: 14, off: -0.6, ipk: -0.06, sw: 1.5, ew: 1.7 }, { id: '74', w: 13, off: 0.1, ipk: 0, sw: 0.8, ew: 0.9 }, { id: '75', w: 12, off: -0.3, ipk: -0.04, sw: 1, ew: 1.2 }, { id: '76', w: 12, off: 0.2, ipk: 0.02, sw: 0.6, ew: 0.5 },
   ],
   Comodoro: [
     { id: 'A', w: 30, off: -0.9, ipk: -0.1, sw: 1.4, ew: 1.5 }, { id: 'B', w: 26, off: 0.3, ipk: 0.06, sw: 0.8, ew: 0.7 }, { id: 'C', w: 24, off: -0.5, ipk: -0.02, sw: 1.6, ew: 1.8 }, { id: 'D', w: 20, off: 0.9, ipk: 0.05, sw: 0.5, ew: 0.6 },
   ],
   'San Luis': [
-    { id: '10', w: 28, off: 0.2, ipk: 0.03, sw: 1, ew: 0.9 }, { id: '11', w: 24, off: -0.4, ipk: -0.05, sw: 1.3, ew: 1.4 }, { id: '12', w: 26, off: 0.3, ipk: 0.04, sw: 0.8, ew: 0.8 }, { id: '14', w: 22, off: -0.1, ipk: -0.02, sw: 0.9, ew: 1 },
+    { id: '10', w: 28, off: 0.2, ipk: 0.03, sw: 1, ew: 0.9 }, { id: '12', w: 24, off: -0.4, ipk: -0.05, sw: 1.3, ew: 1.4 }, { id: '14', w: 26, off: 0.3, ipk: 0.04, sw: 0.8, ew: 0.8 }, { id: '16', w: 22, off: -0.1, ipk: -0.02, sw: 0.9, ew: 1 },
   ],
   'Villa Mercedes': [
-    { id: '20', w: 34, off: 0.4, ipk: 0.05, sw: 0.9, ew: 0.8 }, { id: '21', w: 36, off: -0.6, ipk: -0.06, sw: 1.5, ew: 1.5 }, { id: '22', w: 30, off: 0.2, ipk: 0.01, sw: 0.8, ew: 1 },
+    { id: '21', w: 34, off: 0.4, ipk: 0.05, sw: 0.9, ew: 0.8 }, { id: '22', w: 36, off: -0.6, ipk: -0.06, sw: 1.5, ew: 1.5 }, { id: '23', w: 30, off: 0.2, ipk: 0.01, sw: 0.8, ew: 1 },
   ],
 };
 export interface LineRow { unit: UnitName; line: string; kmExec: number; cumpl: number; ipk: number; sin: number; exc: number }

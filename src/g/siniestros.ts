@@ -1,7 +1,10 @@
 // Siniestros e incidentes: eventos demostrativos coherentes con data.ts (siniestros por mes/unidad),
 // con conductores, coches, reparaciones y seguimiento económico.
 import { DATA, UNIT_NAMES, UnitFilter, UnitName, hashStr, mulberry32, unitsOf } from './data';
-import { AnchorKey, Bus, BUSES, OT, OTEstado, dstr, makeOT, monthEnd } from './taller';
+import { Bus, BUSES, dstr, monthEnd } from './taller';
+import { materials as CATALOG, componentById } from '../data/catalog';
+import { mechanicsByBase, orders as ALL_ORDERS } from '../data/fleet';
+import type { WorkOrder } from '../data/types';
 
 export type Resp = 'Chofer' | 'Tercero' | 'En análisis';
 export type RepEstado = 'REPARADA' | 'EN REPARACION' | 'PENDIENTE';
@@ -11,18 +14,21 @@ export type ClaimEstado = 'En análisis' | 'Negociación' | 'Oferta recibida' | 
 
 const FIRST = ['Pedro', 'Juan', 'Martín', 'Luis', 'Carlos', 'Raúl', 'Diego', 'Sergio', 'Marcos', 'Gabriel', 'Lucas', 'Hugo', 'Facundo', 'Nicolás', 'Ariel', 'Gustavo', 'Walter', 'Omar', 'Daniel', 'Mauro'];
 const LAST = ['López', 'Pérez', 'Silva', 'Díaz', 'Gómez', 'Torres', 'Sosa', 'Vera', 'Romero', 'Acosta', 'Ruiz', 'Vega', 'Medina', 'Ríos', 'Herrera', 'Castro', 'Molina', 'Ortiz', 'Núñez', 'Paz'];
-const DAMAGES: { text: string; anchor: AnchorKey }[] = [
-  { text: 'Lateral derecho', anchor: 'panel' }, { text: 'Lateral izquierdo', anchor: 'panel' }, { text: 'Puerta trasera', anchor: 'puerta-cen' }, { text: 'Paragolpes delantero', anchor: 'luces' },
-  { text: 'Espejo / lateral', anchor: 'vidrio' }, { text: 'Parte trasera', anchor: 'motor' }, { text: 'Paragolpes', anchor: 'luces' }, { text: 'Espejo exterior', anchor: 'vidrio' },
+// Cada daño apunta a un componente del bus de la ficha técnica (se resalta al abrirla).
+const DAMAGES: { text: string; anchor: string }[] = [
+  { text: 'Lateral derecho', anchor: 'carroceria' }, { text: 'Lateral izquierdo', anchor: 'carroceria' }, { text: 'Puerta trasera', anchor: 'puerta-tras' }, { text: 'Paragolpes delantero', anchor: 'opticas' },
+  { text: 'Espejo / lateral', anchor: 'espejos' }, { text: 'Parte trasera', anchor: 'carroceria' }, { text: 'Parabrisas', anchor: 'parabrisas' }, { text: 'Espejo exterior', anchor: 'espejos' },
 ];
 const REC_STATES_EMP: ClaimEstado[] = ['En análisis', 'Negociación', 'Inspección', 'A acordar'];
 const REC_STATES_TER: ClaimEstado[] = ['Oferta recibida', 'Presentado', 'Cobrado', 'Cobrado'];
 
 export interface Driver { id: string; name: string; unit: UnitName; legajo: number; w: number }
 export interface Siniestro {
-  id: string; num: number; unit: UnitName; m: number; date: Date; fecha: string; bus: Bus; driver: Driver; resp: Resp; lesionados: number; damage: string; anchor: AnchorKey;
+  id: string; num: number; unit: UnitName; m: number; date: Date; fecha: string; bus: Bus; driver: Driver; resp: Resp; lesionados: number; damage: string; anchor: string;
   waitDays: number; repDays: number; asig: Asig;
   cobertura: Cobertura; nSin: string; reclamado: number; reconocido: number; cobrado: number; claim: ClaimEstado;
+  /** OT de reparación en el historial del coche (cuando el coche ya entró a taller). */
+  orderId?: string;
 }
 export interface Incidente { id: string; unit: UnitName; m: number; date: Date; bus: Bus; driver: Driver }
 
@@ -81,6 +87,29 @@ function build() {
   cache.sin = sin; cache.inc = inc;
 }
 export const allSiniestros = () => { build(); return cache.sin!; };
+
+/* Cada siniestro que ya entró a taller queda como OT "Siniestro" en el historial del coche: así la ficha técnica
+   muestra la reparación, los materiales y la zona dañada resaltada en la imagen del bus. */
+(function attachRepairOrders() {
+  const D = 86400000;
+  for (const s of allSiniestros()) {
+    const st = repairState(s, 11); if (st.estado === 'PENDIENTE') continue;
+    const opened = new Date(s.date.getTime() + s.waitDays * D + 9 * 3600000);
+    const closed = st.estado === 'REPARADA' ? new Date(opened.getTime() + s.repDays * D) : undefined;
+    const r = mulberry32(hashStr(`sinot-${s.id}`));
+    const mats = CATALOG.filter((m) => m.component === s.anchor).slice(0, 2).map((m) => ({ code: m.code, name: m.name, unit: m.unit, qty: m.price > 500000 ? 1 : 1 + Math.floor(r() * 4), price: m.price, origin: 'Pañol' as const }));
+    const mech = mechanicsByBase[s.unit];
+    const o: WorkOrder = {
+      id: `OT-S${String(s.num).padStart(4, '0')}`, unit: s.bus.id, base: s.unit, type: 'Siniestro', status: closed ? 'Cerrada' : 'En curso', priority: 'Alta', opened, closed,
+      km: s.bus.km, origin: 'Informe de siniestro', components: [s.anchor], title: `Siniestro: ${s.damage.toLowerCase()}`,
+      diagnosis: `${s.id} del ${s.fecha} · conductor ${s.driver.name} · responsabilidad ${s.resp.toLowerCase()}. Reparación ${s.asig.toLowerCase()}. Daño: ${s.damage} (${componentById[s.anchor].name}).`,
+      mechanic: s.asig === 'Chapista externo' ? 'Chapista externo' : mech[Math.floor(r() * mech.length)], hours: 4 + Math.round(r() * 12), materials: mats,
+    };
+    s.orderId = o.id; s.bus.raw.orders.push(o); ALL_ORDERS.push(o);
+  }
+  BUSES.forEach((b) => b.raw.orders.sort((a, b2) => b2.opened.getTime() - a.opened.getTime()));
+  ALL_ORDERS.sort((a, b) => b.opened.getTime() - a.opened.getTime());
+})();
 export const allIncidentes = () => { build(); return cache.inc!; };
 const inF = (f: UnitFilter) => { const us = unitsOf(f); return (x: { unit: UnitName }) => us.includes(x.unit); };
 
@@ -156,11 +185,4 @@ export function driverEvents(d: Driver) {
   return { sin: allSiniestros().filter((s) => s.driver.id === d.id), inc: allIncidentes().filter((i) => i.driver.id === d.id) };
 }
 
-// OT sintética para abrir la ficha del coche sobre la zona dañada
-export function siniestroOT(s: Siniestro, m: number): OT {
-  const st = repairState(s, m).estado;
-  const est: OTEstado = st === 'REPARADA' ? 'Cerrada' : st === 'EN REPARACION' ? 'En proceso' : 'Pendiente';
-  const age = Math.max(0, Math.round((monthEnd(m).getTime() - s.date.getTime()) / 86400000));
-  return makeOT(s.bus, `sin-${s.id}`, 800 + s.num, est, age, { text: `Siniestro · ${s.damage}`, sector: 'Carrocería', anchor: s.anchor });
-}
 export const fmtMoney = (v: number) => `$ ${Math.round(v).toLocaleString('es-AR')}`;
