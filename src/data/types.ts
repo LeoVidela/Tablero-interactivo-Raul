@@ -1,4 +1,4 @@
-export type Module = 'Resumen' | 'Tráfico' | 'Flota' | 'Taller' | 'RRHH' | 'Combustible' | 'Seguridad';
+export type Module = 'Resumen' | 'Tráfico' | 'Flota' | 'Taller' | 'RRHH' | 'Combustible' | 'Seguridad' | 'Pañol';
 
 export type Base = {
   name: string; code: string; city: string; color: string;

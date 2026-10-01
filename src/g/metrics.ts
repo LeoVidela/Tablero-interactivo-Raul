@@ -5,7 +5,7 @@ import { sinData } from './siniestros';
 import { hrTotals } from './rrhh';
 import { fmt, money, moneyM, pct } from './ui';
 
-export type Target = 'Resumen' | 'Tráfico' | 'Flota' | 'Taller' | 'RRHH' | 'Combustible' | 'Seguridad';
+export type Target = 'Resumen' | 'Tráfico' | 'Flota' | 'Taller' | 'RRHH' | 'Combustible' | 'Seguridad' | 'Pañol';
 export type MetricKey =
   | 'cumpl' | 'reg' | 'kmExec' | 'disp' | 'oper' | 'out' | 'aux' | 'aus' | 'cob' | 'sin' | 'exc' | 'cost' | 'inc' | 'margin' | 'pax' | 'ipk'
   | 'otOpen' | 'otClosed' | 'prevDone' | 'prevPend' | 'reinc' | 'repTime' | 'personal' | 'horas' | 'lts' | 'kmpl' | 'gastoRep' | 'gastoTot' | 'costoMantKm'

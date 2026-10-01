@@ -79,3 +79,11 @@ Todo se construyó **encima** del tablero con la imagen real del bus: la ficha t
   - Indicadores del día por sede: km productivos/enlace/totales GPS, eficiencia, velocidad, coches activos, servicios cubiertos, desviación vs ideal, pasajeros, puntualidad, demora, eventos; km acumulados real contra ideal horario; líneas, ranking de coches y eventos. Todo con detalle al tocar.
 - **Combustible**: medición de tanques (aforo con regla, stock por libros, autonomía, punto de pedido), serrucho de nivel de 60 días, consumo diario, control de mermas, mediciones e ingresos de cisterna.
 - **RR.HH.**: cada indicador del resumen mensual abre su listado (activos, altas, bajas, ausencias, ART, carpetas) con filtros por base, área y tipo; cada fila abre el análisis del legajo. La tabla por área también es clickeable.
+
+## Pañol y neumáticos (01/10/2026)
+
+- Menú lateral unificado en una sola lista; **Pañol** va antes de Configuración.
+- **Stock valorizado** por pañol y por las 13 categorías del sistema actual (repuesto, repuesto eléctrico, herramienta, inventario, higiene y seguridad, chapa y pintura, lubricantes, ferretería y bulonería, neumáticos nuevos, neumáticos precurados, cristales, gomería, consumibles). Bajo mínimo, cobertura, consumo valorizado.
+- **Artículos** con foto (campo `foto` de cada artículo: al conectar el sistema se usan sus fotos; mientras tanto, imagen ilustrativa por categoría), ficha con stock y ubicación por base y consumo de 12 meses.
+- **Neumáticos**: cada cubierta con n° de fuego, marca, medida, tipo/vida, mediciones de dibujo y presión, km, desgaste y fecha estimada de cambio. Esquema del chasis (imagen real) con las 6 posiciones (2 delanteras, 2+2 traseras) coloreadas por desgaste; consulta por n° de fuego o interno (también desde el buscador global y desde la ficha del coche).
+- **Proyecciones**: cambios por mes, compras de nuevas y precuradas descontando stock y cascos en recapado, rendimiento y costo por km por marca.

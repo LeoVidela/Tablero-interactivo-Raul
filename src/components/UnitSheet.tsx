@@ -1,8 +1,11 @@
 import { isTopModal } from '../g/esc';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, BusFront, CalendarClock, ChevronRight, CircleDollarSign, Clock3, Gauge, Hammer, Layers, PackageSearch, Route, User, Wrench, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BusFront, CalendarClock, ChevronRight, CircleDollarSign, Clock3, Gauge, Hammer, Layers, PackageSearch, Route, User, Wrench, X } from 'lucide-react';
 import { BusDiagram } from './BusDiagram';
+import { TireLayout, focusTire } from '../g/views/Panol';
+import { busTires } from '../g/panol';
+import { useDrill } from '../g/drill';
 import { componentById, systems } from '../data/catalog';
 import { daysBetween, isOpen, now, orderCost, PREVENTIVE_KM, SERVICE_KM } from '../data/fleet';
 import { componentStats, lineComponent, lineCost, summarizeMaterials } from '../data/stats';
@@ -15,6 +18,7 @@ type Range = keyof typeof ranges;
 export const statusClass = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
 
 export function UnitSheet({ unit, initialOrder, initialComponent, onClose }: { unit: Unit; initialOrder?: string; initialComponent?: string; onClose: () => void }) {
+  const drill = useDrill();
   const [view, setView] = useState<BusView>('corte');
   const [range, setRange] = useState<Range>('12 meses');
   const [component, setComponent] = useState<string | null>(initialComponent ?? null);
@@ -80,6 +84,10 @@ export function UnitSheet({ unit, initialOrder, initialComponent, onClose }: { u
             <div className="panel mini-card">
               <span className="section-kicker">Costo de materiales por sistema</span>
               {bySystem.filter((s) => s.cost > 0).slice(0, 5).map((s) => <div className="sys-row" key={s.sys}><span>{s.sys}</span><div className="sys-bar"><i style={{ width: `${(s.cost / maxSys) * 100}%` }} /></div><b>{moneyShort(s.cost)}</b></div>)}
+            </div>
+            <div className="panel mini-card tires">
+              <div className="panel-heading"><span className="section-kicker">Cubiertas · tocá una</span><button className="text-button" onClick={() => { onClose(); drill.go('Pañol', { tab: 'Neumáticos' }); focusTire({ bus: unit.interno }); }}>Ver en Pañol <ArrowRight size={13} /></button></div>
+              <TireLayout busId={unit.interno} compact onPick={(p) => { const t = busTires(unit.interno).find((x) => x.pos === p); if (t) { onClose(); drill.go('Pañol', { tab: 'Neumáticos' }); focusTire({ serie: t.serie }); } }} />
             </div>
             <div className="panel mini-card tech">
               <span className="section-kicker">Datos del coche</span>

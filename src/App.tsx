@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Warehouse } from 'lucide-react';
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, BusFront, CalendarDays, CheckCircle2, ChevronRight, CircleHelp, Clock3, Download, Fuel, Gauge, LayoutDashboard, Menu, Search, Settings2, ShieldCheck, Sparkles, Users, Wrench, X, Zap } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -24,6 +24,7 @@ import { TraficoLive } from './g/views/TraficoLive';
 import { SiniestrosView } from './g/views/Siniestros';
 import { CombustibleView } from './g/views/Combustible';
 import { GreetingBar, GreetingTitle } from './g/views/Greeting';
+import { PanolView } from './g/views/Panol';
 import { MetricDrawer } from './g/views/MetricDrawer';
 import { BaseDetail } from './g/views/BaseDetail';
 import { Comparativa, GlobalSearch, HelpModal, SettingsModal, WorkspaceMenu } from './g/views/Shell';
@@ -34,7 +35,7 @@ import type { MetricKey, Target } from './g/metrics';
 
 const traffic = [{ time: '06:00', value: 82 }, { time: '08:00', value: 94 }, { time: '10:00', value: 88 }, { time: '12:00', value: 91 }, { time: '14:00', value: 86 }, { time: '16:00', value: 96 }, { time: '18:00', value: 99 }, { time: '20:00', value: 93 }];
 export const moduleLabel = (m: Module) => (m === 'Seguridad' ? 'Siniestros y Seguridad' : m);
-const moduleMeta: Record<Module, { icon: React.ElementType; subtitle: string }> = { Resumen: { icon: LayoutDashboard, subtitle: 'Una mirada completa de la operación' }, Tráfico: { icon: Activity, subtitle: 'Servicios, recorridos y puntualidad' }, Flota: { icon: BusFront, subtitle: 'Disponibilidad y estado de unidades' }, Taller: { icon: Wrench, subtitle: 'Mantenimiento preventivo y correctivo' }, RRHH: { icon: Users, subtitle: 'Dotación, turnos y ausentismo' }, Combustible: { icon: Fuel, subtitle: 'Consumos y rendimiento por base' }, Seguridad: { icon: ShieldCheck, subtitle: 'Incidentes y cumplimiento' } };
+const moduleMeta: Record<Module, { icon: React.ElementType; subtitle: string }> = { Resumen: { icon: LayoutDashboard, subtitle: 'Una mirada completa de la operación' }, Tráfico: { icon: Activity, subtitle: 'Servicios, recorridos y puntualidad' }, Flota: { icon: BusFront, subtitle: 'Disponibilidad y estado de unidades' }, Taller: { icon: Wrench, subtitle: 'Mantenimiento preventivo y correctivo' }, RRHH: { icon: Users, subtitle: 'Dotación, turnos y ausentismo' }, Combustible: { icon: Fuel, subtitle: 'Consumos y rendimiento por base' }, Seguridad: { icon: ShieldCheck, subtitle: 'Incidentes y cumplimiento' } , Pañol: { icon: Warehouse, subtitle: 'Stock valorizado y neumáticos' } };
 
 const records: Record<Module, RecordItem[]> = {
   Tráfico: [
@@ -59,6 +60,7 @@ const records: Record<Module, RecordItem[]> = {
     { id: 'SEG-104', base: 'Córdoba', title: 'Auditoría completada', detail: 'Cumplimiento 98%', status: 'Operativo', time: 'Ayer' },
   ],
   Resumen: [],
+  Pañol: [],
 };
 
 const average = (key: keyof Base) => bases.reduce((sum, base) => sum + Number(base[key]), 0) / bases.length;
@@ -105,14 +107,13 @@ export function App() {
     { label: 'Puntualidad', value: `${average('punctuality').toFixed(1).replace('.', ',')}%`, detail: 'demora media 4 min', icon: Clock3, tone: 'good', action: () => go('Tráfico') },
   ];
 
-  const ownHeader = activeModule === 'RRHH' || activeModule === 'Seguridad' || activeModule === 'Combustible';
+  const ownHeader = activeModule === 'RRHH' || activeModule === 'Seguridad' || activeModule === 'Combustible' || activeModule === 'Pañol';
   const periodic = activeModule === 'Taller' || activeModule === 'Flota';
   return <OpenUnitCtx.Provider value={openUnit}><DrillCtx.Provider value={drill}><div className="app-shell"><div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
       <div className="brand"><img src={theme === 'light' ? logoLight : logoDark} alt="Solbus" /></div>
       <div className="ws-wrap"><button className="workspace" onClick={() => setPanel(panel === 'ws' ? null : 'ws')}><span className="workspace-dot" /> {unit === 'Todos' ? 'Grupo Solbus' : unit} <ChevronRight size={14} /></button>{panel === 'ws' && <WorkspaceMenu unit={unit} setUnit={setUnit} onClose={() => setPanel(null)} />}</div>
-      <p className="nav-title">Operación</p><nav>{(Object.keys(moduleMeta) as Module[]).slice(0, 5).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{moduleLabel(item)}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}</nav>
-      <nav className="nav-second">{(['Combustible', 'Seguridad'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{moduleLabel(item)}</span></button>; })}<button className="nav-item" onClick={() => setPanel('settings')}><Settings2 size={18} /><span>Configuración</span></button></nav>
+      <p className="nav-title">Operación</p><nav className="nav-main">{(['Resumen', 'Tráfico', 'Flota', 'Taller', 'RRHH', 'Combustible', 'Seguridad', 'Pañol'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{moduleLabel(item)}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}<button className="nav-item" onClick={() => setPanel('settings')}><Settings2 size={18} /><span>Configuración</span></button></nav>
       <div className="sidebar-bottom"><button className="help" onClick={() => setPanel('help')}><CircleHelp size={17} /><div><strong>¿Necesitas ayuda?</strong><span>Centro de soporte</span></div></button><button className="user" onClick={() => setPanel('settings')}><div className="avatar">LV</div><div><strong>Leo Videla</strong><span>Sistemas</span></div><ChevronRight size={15} /></button></div>
     </aside>
     <main className="main-content">
@@ -128,6 +129,7 @@ export function App() {
         : activeModule === 'RRHH' ? <RRHHView unit={unit} notify={notify} />
         : activeModule === 'Seguridad' ? <SiniestrosView unit={unit} notify={notify} requestedTab={tabReq?.module === 'Seguridad' ? tabReq : null} />
         : activeModule === 'Combustible' ? <CombustibleView unit={unit} notify={notify} />
+        : activeModule === 'Pañol' ? <PanolView unit={unit} notify={notify} requestedTab={tabReq?.module === 'Pañol' ? tabReq : null} />
         : <>{activeModule === 'Tráfico' && <TraficoLive unit={unit} notify={notify} />}<ModuleView module={activeModule} bases={gBases} records={visibleRecords} onBase={(b) => setBaseOpen(b.name as UnitName)} onRecord={(r) => r.unit ? openUnit(r.unit, { order: r.ot }) : setSelectedRecord(r)} /></>}
     </main>
     <AnimatePresence>{selectedRecord && <RecordDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} onBase={(b) => { setSelectedRecord(null); setBaseOpen(b); }} />}{baseOpen && <BaseDetail key={baseOpen} base={baseOpen} onClose={() => setBaseOpen(null)} />}{metric && <MetricDrawer key={metric.k + metric.unit} k={metric.k} unit={metric.unit} month={metric.month} onClose={() => setMetric(null)} onGo={(t, tab, u) => go(t as Module, { tab, unit: u })} />}{panel === 'settings' && <SettingsModal theme={theme} toggleTheme={toggleTheme} unit={unit} setUnit={setUnit} onClose={() => setPanel(null)} notify={notify} />}{panel === 'help' && <HelpModal onClose={() => setPanel(null)} />}{panel === 'cmp' && <Comparativa onClose={() => setPanel(null)} />}{sheet && <UnitSheet key={sheet.unit + (sheet.order ?? '')} unit={unitById[sheet.unit]} initialOrder={sheet.order} initialComponent={sheet.component} onClose={() => setSheet(null)} />}</AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="toast"><CheckCircle2 size={17} /> {toast}</motion.div>}

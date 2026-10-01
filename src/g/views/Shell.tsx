@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BusFront, Building2, ChevronRight, ClipboardList, CornerDownLeft, Keyboard, LayoutDashboard, MousePointerClick, Moon, RotateCcw, Search, Sun, UserRound, Wrench, X } from 'lucide-react';
+import { CircleDot, Package, BusFront, Building2, ChevronRight, ClipboardList, CornerDownLeft, Keyboard, LayoutDashboard, MousePointerClick, Moon, RotateCcw, Search, Sun, UserRound, Wrench, X } from 'lucide-react';
 import { orders as ALL_ORDERS, mechanicsByBase, units as ALL_UNITS } from '../../data/fleet';
 import { MONTH_LABELS, UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName } from '../data';
 import { DRIVERS } from '../siniestros';
@@ -8,9 +8,11 @@ import { METRICS, MetricKey, Target } from '../metrics';
 import { useDrill } from '../drill';
 import { useTopEscape } from '../esc';
 import { useOpenUnit } from '../openUnit';
+import { ARTS, TIRES } from '../panol';
+import { focusTire } from './Panol';
 
 // ---------- búsqueda global ----------
-type Hit = { kind: 'Coche' | 'OT' | 'Mecánico' | 'Conductor' | 'Base' | 'Módulo'; title: string; sub: string; run: () => void };
+type Hit = { kind: 'Coche' | 'OT' | 'Mecánico' | 'Conductor' | 'Base' | 'Módulo' | 'Cubierta' | 'Artículo'; title: string; sub: string; run: () => void };
 const MODULES: { t: Target; label: string; words: string }[] = [
   { t: 'Resumen', label: 'Resumen · Tablero de control integral', words: 'resumen gerencia panel kpi indicadores' },
   { t: 'Tráfico', label: 'Tráfico · Flota en vivo', words: 'trafico micronauta vivo lineas' },
@@ -19,6 +21,7 @@ const MODULES: { t: Target; label: string; words: string }[] = [
   { t: 'RRHH', label: 'RR.HH.', words: 'rrhh personal ausentismo legajo' },
   { t: 'Combustible', label: 'Combustible', words: 'combustible gasoil litros rendimiento' },
   { t: 'Seguridad', label: 'Siniestros y Seguridad', words: 'siniestros seguridad incidentes reclamos' },
+  { t: 'Pañol', label: 'Pañol y neumáticos', words: 'pañol panol stock repuestos neumaticos cubiertas gomeria lubricantes' },
 ];
 export function GlobalSearch({ query, setQuery }: { query: string; setQuery: (q: string) => void }) {
   const drill = useDrill(); const openUnit = useOpenUnit();
@@ -35,12 +38,15 @@ export function GlobalSearch({ query, setQuery }: { query: string; setQuery: (q:
     ALL_ORDERS.filter((o) => o.id.toLowerCase().includes(q) || o.title.toLowerCase().includes(q)).slice(0, 4).forEach((o) => out.push({ kind: 'OT', title: `${o.id} · ${o.title}`, sub: `Interno ${o.unit} · ${o.base} · ${o.status}`, run: () => openUnit(o.unit, { order: o.id }) }));
     UNIT_NAMES.forEach((b) => mechanicsByBase[b].filter((m) => m.toLowerCase().includes(q)).forEach((m) => out.push({ kind: 'Mecánico', title: m, sub: `Taller ${b} · productividad`, run: () => drill.go('Taller', { tab: 'Productividad', unit: b }) })));
     UNIT_NAMES.forEach((b) => DRIVERS[b].filter((d) => d.name.toLowerCase().includes(q)).slice(0, 3).forEach((d) => out.push({ kind: 'Conductor', title: d.name, sub: `${b} · legajo ${d.legajo} · siniestros`, run: () => drill.go('Seguridad', { tab: 'Histórico de conductores', unit: b }) })));
+    if (/^\d{1,4}$/.test(q)) ALL_UNITS.filter((u) => String(u.interno) === q).forEach((u) => out.push({ kind: 'Cubierta', title: `Cubiertas del interno ${u.interno}`, sub: 'Esquema de las 6 posiciones · desgaste', run: () => { drill.go('Pañol', { tab: 'Neumáticos' }); focusTire({ bus: u.interno }); } }));
+    TIRES.filter((t) => t.serie.toLowerCase().includes(q)).slice(0, 4).forEach((t) => out.push({ kind: 'Cubierta', title: `Cubierta ${t.serie} · ${t.marca}`, sub: t.estado === 'Montada' ? `${t.ubic} · ${t.mm} mm` : t.ubic, run: () => { drill.go('Pañol', { tab: 'Neumáticos' }); focusTire({ serie: t.serie }); } }));
+    ARTS.filter((a) => `${a.codigo} ${a.nombre}`.toLowerCase().includes(q)).slice(0, 3).forEach((a) => out.push({ kind: 'Artículo', title: a.nombre, sub: `${a.codigo} · ${a.cat} · pañol`, run: () => drill.go('Pañol', { tab: 'Artículos' }) }));
     UNIT_NAMES.filter((b) => b.toLowerCase().includes(q)).forEach((b) => out.push({ kind: 'Base', title: b, sub: 'Ficha de la unidad de negocio', run: () => drill.openBase(b) }));
     MODULES.filter((m) => m.words.includes(q) || m.label.toLowerCase().includes(q)).forEach((m) => out.push({ kind: 'Módulo', title: m.label, sub: 'Ir al módulo', run: () => drill.go(m.t) }));
     return out.slice(0, 12);
   }, [query, drill, openUnit]);
   const pick = (h: Hit) => { h.run(); setOpen(false); setQuery(''); ref.current?.blur(); };
-  const ICON = { Coche: BusFront, OT: ClipboardList, Mecánico: Wrench, Conductor: UserRound, Base: Building2, Módulo: LayoutDashboard };
+  const ICON = { Coche: BusFront, OT: ClipboardList, Mecánico: Wrench, Conductor: UserRound, Base: Building2, Módulo: LayoutDashboard, Cubierta: CircleDot, Artículo: Package };
   return <div className="search gsearch"><Search size={16} />
     <input ref={ref} placeholder="Buscar interno, dominio, OT, mecánico, chofer…  ( / )" value={query} onFocus={() => setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 180)}
       onChange={(e) => { setQuery(e.target.value); setSel(0); setOpen(true); }}

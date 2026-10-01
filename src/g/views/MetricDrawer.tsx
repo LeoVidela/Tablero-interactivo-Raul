@@ -7,7 +7,7 @@ import { AXIS, GRID, TOOLTIP_STYLE, UnitSelector, fmt } from '../ui';
 import { useTopEscape } from '../esc';
 import { METRICS, MetricKey, Target, metricByUnit, metricSeries } from '../metrics';
 
-const MODULE_LABEL: Record<Target, string> = { Resumen: 'Resumen', Tráfico: 'Tráfico', Flota: 'Flota', Taller: 'Taller', RRHH: 'RR.HH.', Combustible: 'Combustible', Seguridad: 'Siniestros y Seguridad' };
+const MODULE_LABEL: Record<Target, string> = { Resumen: 'Resumen', Tráfico: 'Tráfico', Flota: 'Flota', Taller: 'Taller', RRHH: 'RR.HH.', Combustible: 'Combustible', Seguridad: 'Siniestros y Seguridad', Pañol: 'Pañol' };
 
 export function MetricDrawer({ k, unit, month = 11, onClose, onGo }: { k: MetricKey; unit: UnitFilter; month?: number; onClose: () => void; onGo: (t: Target, tab: string | undefined, u: UnitFilter) => void }) {
   const def = METRICS[k];
