@@ -646,6 +646,10 @@
 :root[data-theme="light"] .tl-dl dd.low{color:#af0909}
 :root[data-theme="light"] .tl-movs{color:#394256}
 :root[data-theme="light"] .tl-movs time{color:#11141d}
+:root[data-theme="light"] .art-photo.pic{background:#11161d;border-color:rgba(23,23,23,0.1)}
+:root[data-theme="light"] .art-photo.pic.big small{color:#627288}
+:root[data-theme="light"] .art-photo.real{background:#171717}
+:root[data-theme="light"] .art-photo.real.big small{background:rgba(0,0,0,0.33);color:#14161a}
 
 /* ---------- ajustes manuales del modo claro ---------- */
 :root[data-theme="light"]{color-scheme:light}

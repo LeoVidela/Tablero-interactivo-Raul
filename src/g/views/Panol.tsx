@@ -12,6 +12,8 @@ import { busesOf } from '../taller';
 import { ARTS, Art, CATS, CAT_COLOR, Cat, POS, POS_LABEL, POS_SHORT, POS_XY, Pos, Tire, bajoMin, busTires, cobertura, kmDia, minOf, proyeccion, stockOf, tireColor, tiresOf, valorOf, TIRES, PSI_OBJ, HOY } from '../panol';
 import chasis from '../../assets/chasis-cubiertas.webp';
 import { Bars, C, Tile } from './shared';
+import { ArtIllustration, picKind } from './artPics';
+import { PHOTOS } from '../artPhotos';
 
 const TABS = ['Stock valorizado', 'Artículos', 'Neumáticos', 'Proyecciones'] as const;
 type Tab = (typeof TABS)[number];
@@ -23,12 +25,11 @@ export function focusTire(f: { serie?: string; bus?: string }) { pending = f; wi
 
 /** Foto del artículo: la del sistema de pañol si está cargada; si no, una imagen ilustrativa de la categoría. */
 export function ArtPhoto({ a, big }: { a: Art; big?: boolean }) {
+  const ph = a.foto ? null : PHOTOS[picKind(a.nombre)];
+  const [err, setErr] = useState(false);
   if (a.foto) return <img className={`art-photo ${big ? 'big' : ''}`} src={a.foto} alt={a.nombre} />;
-  const I = CAT_ICON[a.cat]; const tire = a.cat.startsWith('Neumáticos');
-  return <div className={`art-photo ${big ? 'big' : ''}`} style={{ ['--tone' as string]: CAT_COLOR[a.cat] }} title="Foto del sistema de pañol (se completa al conectar)">
-    {tire ? <svg viewBox="0 0 100 100" className="art-tire"><circle cx="50" cy="50" r="44" className="t-out" /><circle cx="50" cy="50" r="24" className="t-rim" /><circle cx="50" cy="50" r="7" className="t-hub" />{Array.from({ length: 18 }, (_, i) => <line key={i} x1={50 + 36 * Math.cos(i * 0.349)} y1={50 + 36 * Math.sin(i * 0.349)} x2={50 + 44 * Math.cos(i * 0.349)} y2={50 + 44 * Math.sin(i * 0.349)} className="t-tread" />)}</svg> : <I size={big ? 54 : 26} />}
-    {big && <small>Foto del sistema de pañol</small>}
-  </div>;
+  if (ph && !err) return <div className={`art-photo real ${big ? 'big' : ''}`} title={a.nombre}><img src={ph.u} alt={a.nombre} loading="lazy" referrerPolicy="no-referrer" onError={() => setErr(true)} />{big && <small>Foto de referencia: {ph.autor} · {ph.lic} · Wikimedia Commons</small>}</div>;
+  return <div className={`art-photo pic ${big ? 'big' : ''}`} title={a.nombre}><ArtIllustration nombre={a.nombre} big={big} />{big && <small>Imagen ilustrativa · se reemplaza por la foto del sistema de pañol</small>}</div>;
 }
 
 export function PanolView({ unit, notify, requestedTab }: { unit: UnitFilter; notify: (m: string) => void; requestedTab?: { tab: string; n: number } | null }) {

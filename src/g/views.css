@@ -535,3 +535,11 @@ em.ok,small.ok{color:#4ade80}em.low,small.low{color:#f87171}
 .mini-card.tires .panel-heading{margin-bottom:8px;align-items:center}
 @media(max-width:1350px){.tl-main{grid-template-columns:220px minmax(0,1fr)}.tl-detail{grid-column:1/-1;max-height:none}}
 @media(max-width:800px){.tl-main{grid-template-columns:1fr}.tl-side{max-height:320px}.tl-tag small{display:none}}
+.art-photo.pic{background:#eef1f5;padding:0;border-color:rgba(255,255,255,.1)}
+.art-ill{display:block;width:100%;height:100%}
+.art-photo.pic.big{position:relative;padding:0;gap:0}.art-photo.pic.big .art-ill{height:100%}
+.art-photo.pic.big small{position:absolute;bottom:6px;left:0;right:0;text-align:center;color:#64748b}
+.pn-card .art-photo.pic{height:130px}
+.art-photo.real{background:#fff;padding:0;position:relative}.art-photo.real img{display:block;width:100%;height:100%;object-fit:cover}
+.pn-card .art-photo.real{height:130px}
+.art-photo.real.big{height:240px}.art-photo.real.big small{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;background:rgba(0,0,0,.6);color:#e5e7eb;font-size:10px;text-align:left}
