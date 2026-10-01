@@ -68,3 +68,14 @@ Todo se construyó **encima** del tablero con la imagen real del bus: la ficha t
 - **Combustible** (`src/g/views/Combustible.tsx`): litros, km/l, costo, por base, ranking y desvíos por coche.
 - **Búsqueda global** (atajo `/`), **configuración**, **ayuda**, **comparativa de bases**, **todas las alertas** y **exportar a Excel (CSV)** reales.
 - Esc cierra sólo la ventana superior. Respaldo previo: tag `respaldo-2026-09-30-antes-interacciones`.
+
+## Ajustes post-prueba (01/10/2026)
+
+- **Logo**: el modo claro usa el mismo logo Solbus (versión con "bus" en negro, `solbus-logo-light.png`).
+- **Saludo**: "Buen día / Buenas tardes / Buenas noches" según la hora de Argentina, con fecha y clima actual de las 4 bases (Open-Meteo, sin clave; si no hay internet no se muestra).
+- **Tráfico**:
+  - 4 pantallas: Córdoba y Comodoro con Micronauta en vivo (o simulación si el servicio está apagado); San Luis y Villa Mercedes como pantallas de ejemplo.
+  - Todas se amplían (botón o tocando la pantalla), con lista de coches en calle por línea → ficha del coche.
+  - Indicadores del día por sede: km productivos/enlace/totales GPS, eficiencia, velocidad, coches activos, servicios cubiertos, desviación vs ideal, pasajeros, puntualidad, demora, eventos; km acumulados real contra ideal horario; líneas, ranking de coches y eventos. Todo con detalle al tocar.
+- **Combustible**: medición de tanques (aforo con regla, stock por libros, autonomía, punto de pedido), serrucho de nivel de 60 días, consumo diario, control de mermas, mediciones e ingresos de cisterna.
+- **RR.HH.**: cada indicador del resumen mensual abre su listado (activos, altas, bajas, ausencias, ART, carpetas) con filtros por base, área y tipo; cada fila abre el análisis del legajo. La tabla por área también es clickeable.

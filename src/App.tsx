@@ -12,7 +12,7 @@ import { componentById } from './data/catalog';
 import type { Base, Module, RecordItem } from './data/types';
 import { ago } from './lib/format';
 import logoDark from './assets/solbus-logo-dark.png';
-import logoLight from './assets/solbus-logo.svg';
+import logoLight from './assets/solbus-logo-light.png';
 import './g/views.css';
 import type { UnitFilter } from './g/data';
 import { UnitSelector } from './g/ui';
@@ -23,6 +23,7 @@ import { RRHHView } from './g/views/RRHH';
 import { TraficoLive } from './g/views/TraficoLive';
 import { SiniestrosView } from './g/views/Siniestros';
 import { CombustibleView } from './g/views/Combustible';
+import { GreetingBar, GreetingTitle } from './g/views/Greeting';
 import { MetricDrawer } from './g/views/MetricDrawer';
 import { BaseDetail } from './g/views/BaseDetail';
 import { Comparativa, GlobalSearch, HelpModal, SettingsModal, WorkspaceMenu } from './g/views/Shell';
@@ -116,7 +117,7 @@ export function App() {
     </aside>
     <main className="main-content">
       <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><div className="breadcrumbs"><span>Grupo Solbus</span><ChevronRight size={14} /><strong>{moduleLabel(activeModule)}</strong></div><div className="top-actions"><GlobalSearch query={query} setQuery={setQuery} /><div className="notification-wrap"><button className="icon-button notification" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><i /></button>{showNotifications && <div className="notification-pop"><strong>Notificaciones</strong><span>{allOrders.filter((o) => isOpen(o) && o.priority === 'Alta').length} OT de prioridad alta en taller</span><button onClick={() => { go('Taller'); setShowNotifications(false); }}>Ver alertas <ChevronRight size={14} /></button></div>}</div><button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><div className="top-avatar">LV</div></div></header>
-      {!ownHeader && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <>Buen día, Leo <span>✦</span></> : moduleLabel(activeModule)}</h1><p>{moduleMeta[activeModule].subtitle}</p></div><div className="hero-actions">{periodic && <div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => { const n = exportView(moduleLabel(activeModule)); notify(`Exportado a Excel: indicadores y ${n} tablas de ${moduleLabel(activeModule)}`); }}><Download size={15} /> Exportar</button></div></section>}
+      {!ownHeader && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <GreetingTitle /> : moduleLabel(activeModule)}</h1><p>{moduleMeta[activeModule].subtitle}</p>{activeModule === 'Resumen' && <GreetingBar unit={unit} />}</div><div className="hero-actions">{periodic && <div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => { const n = exportView(moduleLabel(activeModule)); notify(`Exportado a Excel: indicadores y ${n} tablas de ${moduleLabel(activeModule)}`); }}><Download size={15} /> Exportar</button></div></section>}
       <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Unidad de negocio <strong>{unit === 'Todos' ? 'Todas' : unit}</strong>{periodic && <> · Período <strong>{period}</strong></>}</div><UnitSelector value={unit} onChange={setUnit} /></div>
       {activeModule === 'Resumen' ? <>
         <Gerencia unit={unit} setUnit={setUnit} go={(m) => go(m)} notify={notify} onRecord={(r) => setSelectedRecord(r)} />

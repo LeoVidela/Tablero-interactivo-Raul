@@ -48,24 +48,71 @@ const NOMBRES = ['Raúl', 'Juan', 'María', 'Pedro', 'Ana', 'Carlos', 'Luis', 'M
 const SECTOR: Record<Area, string[]> = { 'Conducción': ['Línea 1', 'Línea 2', 'Línea 3', 'Línea 4'], 'Técnica': ['Taller mecánico', 'Electricidad', 'Carrocería', 'Gomería'], 'Tráfico': ['Despacho', 'Inspectoría'], 'Administración': ['RR.HH.', 'Contaduría', 'Compras'] };
 const SUPERVISOR: Record<Area, string> = { 'Conducción': 'Jefe de Tráfico', 'Técnica': 'Jefe de Taller', 'Tráfico': 'Jefe de Tráfico', 'Administración': 'Gerente Administrativo' };
 const LEG_BASE: Record<UnitName, number> = { 'Córdoba': 1001, Comodoro: 2001, 'San Luis': 3001, 'Villa Mercedes': 4001 };
-export interface Emp { legajo: number; nombre: string; unit: UnitName; area: Area; sector: string; ingreso: string; antig: string; supervisor: string; convenio: string }
+export interface Emp { legajo: number; nombre: string; unit: UnitName; area: Area; sector: string; puesto: string; turno: string; ingreso: string; antig: string; supervisor: string; convenio: string }
 const END = new Date(2026, 8, 30);
-function genEmps(): Emp[] {
-  const out: Emp[] = [];
-  for (const u of UNIT_NAMES) {
-    const r = mulberry32(hashStr(`emp-${u}`));
-    for (let i = 0; i < 24; i++) {
-      const ai = i < 14 ? 0 : i < 18 ? 1 : i < 21 ? 2 : 3; const area = AREAS[ai];
-      const ing = new Date(2010 + Math.floor(r() * 15), Math.floor(r() * 12), 1 + Math.floor(r() * 27));
-      const months = (END.getFullYear() - ing.getFullYear()) * 12 + (END.getMonth() - ing.getMonth());
-      const nombre = `${APELLIDOS[Math.floor(r() * APELLIDOS.length)]} ${NOMBRES[Math.floor(r() * NOMBRES.length)]}`;
-      const sectors = SECTOR[area];
-      out.push({ legajo: LEG_BASE[u] + i, nombre, unit: u, area, sector: sectors[Math.floor(r() * sectors.length)], ingreso: dstr(ing), antig: `${Math.floor(months / 12)} años, ${months % 12} meses`, supervisor: SUPERVISOR[area], convenio: area === 'Administración' ? 'Empleados de comercio' : 'UTA' });
-    }
-  }
-  return out;
+const PUESTO: Record<Area, (sector: string) => string> = {
+  'Conducción': () => 'Chofer de colectivo',
+  'Técnica': (s) => ({ 'Taller mecánico': 'Mecánico', 'Electricidad': 'Electricista', 'Carrocería': 'Carrocero', 'Gomería': 'Gomero' } as Record<string, string>)[s] ?? 'Mecánico',
+  'Tráfico': (s) => (s === 'Despacho' ? 'Despachante' : 'Inspector'),
+  'Administración': (s) => `Administrativo de ${s}`,
+};
+const TURNOS = ['Mañana', 'Tarde', 'Noche', 'Rotativo'];
+function antig(ing: Date, to: Date) { const months = Math.max(0, (to.getFullYear() - ing.getFullYear()) * 12 + (to.getMonth() - ing.getMonth())); return `${Math.floor(months / 12)} años, ${months % 12} meses`; }
+function makeEmp(u: UnitName, legajo: number, area: Area, r: () => number, ing: Date): Emp {
+  const sectors = SECTOR[area]; const sector = area === 'Conducción' ? `Línea ${1 + Math.floor(r() * 4)}` : sectors[Math.floor(r() * sectors.length)];
+  return { legajo, nombre: `${APELLIDOS[Math.floor(r() * APELLIDOS.length)]} ${NOMBRES[Math.floor(r() * NOMBRES.length)]}`, unit: u, area, sector, puesto: PUESTO[area](sector), turno: area === 'Administración' ? 'Mañana' : TURNOS[Math.floor(r() * TURNOS.length)], ingreso: dstr(ing), antig: antig(ing, END), supervisor: SUPERVISOR[area], convenio: area === 'Administración' ? 'Empleados de comercio' : 'UTA' };
 }
-export const EMPS: Emp[] = genEmps();
+/** Plantel por base y área (orden estable): el mes toma los primeros N de cada área. */
+const POOL: Record<UnitName, Record<Area, Emp[]>> = Object.fromEntries(UNIT_NAMES.map((u) => {
+  const r = mulberry32(hashStr(`emp-${u}`)); const size = Math.ceil(STAFF(u) * 1.04) + 4;
+  const per = distribute(size, AREA_W); let leg = LEG_BASE[u];
+  const byArea = Object.fromEntries(AREAS.map((a, ai) => [a, Array.from({ length: per[ai] + 3 }, () => makeEmp(u, leg++, a, r, new Date(2008 + Math.floor(r() * 17), Math.floor(r() * 12), 1 + Math.floor(r() * 27))))])) as Record<Area, Emp[]>;
+  return [u, byArea];
+})) as Record<UnitName, Record<Area, Emp[]>>;
+export const EMPS: Emp[] = UNIT_NAMES.flatMap((u) => AREAS.flatMap((a) => POOL[u][a]));
+
+// ---------- listas del mes (detalle de cada indicador) ----------
+const monthDate = (m: number, day: number) => new Date(m < 3 ? 2025 : 2026, (9 + m) % 12, day);
+const daysIn = (m: number) => new Date(m < 3 ? 2025 : 2026, (9 + m) % 12 + 1, 0).getDate();
+export interface Alta { emp: Emp; fecha: string; motivo: string; contrato: string }
+export interface Baja { emp: Emp; fecha: string; motivo: string }
+export interface Ausencia { emp: Emp; fecha: string; dias: number; tipo: string; justificada: boolean }
+export interface CasoART { emp: Emp; fecha: string; tipo: string; lesion: string; dias: number; estado: string; prestador: string; siniestro: string }
+export interface Carpeta { emp: Emp; desde: string; hasta: string; dias: number; diagnostico: string; validacion: string }
+export interface HRLists { activos: Emp[]; altas: Alta[]; bajas: Baja[]; aus: Ausencia[]; art: CasoART[]; carp: Carpeta[] }
+
+export function roster(u: UnitName, m: number): Emp[] {
+  const n = distribute(unitMonth(u, m).activos, AREA_W);
+  return AREAS.flatMap((a, i) => POOL[u][a].slice(0, n[i]));
+}
+function splitDays(total: number, n: number, r: () => number): number[] {
+  if (n <= 0) return [];
+  return distribute(total, Array.from({ length: n }, () => 0.4 + r()));
+}
+const listCache = new Map<string, HRLists>();
+export function hrLists(filter: UnitFilter, m: number): HRLists {
+  const key = `${filter}-${m}`; const hit = listCache.get(key); if (hit) return hit;
+  const out: HRLists = { activos: [], altas: [], bajas: [], aus: [], art: [], carp: [] };
+  for (const u of unitsOf(filter)) {
+    const t = unitMonth(u, m); const r = mulberry32(hashStr(`hrl-${u}-${m}`)); const ros = roster(u, m);
+    const pick = (pool: Emp[] = ros) => pool[Math.floor(r() * pool.length)];
+    const day = () => 1 + Math.floor(r() * daysIn(m));
+    const byArea = (ws: number[]) => { const x = r() * ws.reduce((s, w) => s + w, 0); let acc = 0; for (let i = 0; i < ws.length; i++) { acc += ws[i]; if (x <= acc) return AREAS[i]; } return AREAS[0]; };
+    out.activos.push(...ros);
+    for (let k = 0; k < t.altas; k++) { const area = byArea(AREA_W); const d = monthDate(m, day()); const e = makeEmp(u, LEG_BASE[u] + 600 + m * 12 + k, area, r, d); out.altas.push({ emp: e, fecha: dstr(d), motivo: ['Reemplazo de baja', 'Ampliación de dotación', 'Cobertura de licencias'][Math.floor(r() * 3)], contrato: 'Período de prueba (3 meses)' }); }
+    for (let k = 0; k < t.bajas; k++) { const area = byArea([60, 20, 12, 8]); out.bajas.push({ emp: pick(ros.filter((e) => e.area === area)) ?? pick(), fecha: dstr(monthDate(m, day())), motivo: ['Renuncia', 'Renuncia', 'Jubilación', 'Despido sin causa', 'Despido con causa', 'Fin de período de prueba', 'Acuerdo mutuo'][Math.floor(r() * 7)] }); }
+    // ausencias: eventos de 1 a 3 días que suman los días del mes
+    let left = t.ausDias;
+    while (left > 0) { const dias = Math.min(left, 1 + Math.floor(r() * 3)); left -= dias; const tipo = ['Injustificada', 'Con aviso', 'Enfermedad de familiar', 'Trámite personal', 'Duelo'][Math.floor(r() * 5)]; out.aus.push({ emp: pick(), fecha: dstr(monthDate(m, day())), dias, tipo, justificada: tipo !== 'Injustificada' }); }
+    const artD = splitDays(t.artDias, t.artCant, r);
+    artD.forEach((dias) => { const area = byArea([70, 25, 5, 0.01]); const tipo = r() < 0.35 ? 'In itinere' : 'En jornada laboral'; out.art.push({ emp: pick(ros.filter((e) => e.area === area)) ?? pick(), fecha: dstr(monthDate(m, day())), tipo, lesion: ['Contusión', 'Esguince de tobillo', 'Lumbalgia por esfuerzo', 'Corte superficial', 'Fractura de muñeca', 'Golpe en mano'][Math.floor(r() * 6)], dias, estado: r() < 0.55 ? 'En tratamiento' : 'Alta médica', prestador: ['Prevención ART', 'Experta ART', 'Galeno ART'][Math.floor(r() * 3)], siniestro: `ART-${m}${String(hashStr(u + dias + r()) % 9000 + 1000)}` }); });
+    const carD = splitDays(t.carpDias, t.carpCant, r);
+    carD.forEach((dias) => { const area = byArea([45, 40, 10, 5]); const d0 = day(); out.carp.push({ emp: pick(ros.filter((e) => e.area === area)) ?? pick(), desde: dstr(monthDate(m, d0)), hasta: dstr(monthDate(m, d0 + dias - 1)), dias, diagnostico: ['Cuadro respiratorio', 'Gastroenteritis', 'Osteomuscular', 'Control post quirúrgico', 'Odontológica', 'Cefalea / migraña'][Math.floor(r() * 6)], validacion: r() < 0.8 ? 'Validada por médico laboral' : 'Pendiente de control' }); });
+  }
+  const byDate = (a: string, b: string) => a.split('/').reverse().join('').localeCompare(b.split('/').reverse().join(''));
+  out.altas.sort((a, b) => byDate(a.fecha, b.fecha)); out.bajas.sort((a, b) => byDate(a.fecha, b.fecha)); out.aus.sort((a, b) => byDate(a.fecha, b.fecha)); out.art.sort((a, b) => byDate(a.fecha, b.fecha)); out.carp.sort((a, b) => byDate(a.desde, b.desde));
+  listCache.set(key, out); return out;
+}
 export interface Nov { aus: number; carp: number; art: number; inf: number; aper: number; sus: number; sinCon: number; sinSin: number; inc: number }
 export function empMonths(e: Emp): Nov[] {
   const r = mulberry32(hashStr(`nov-${e.legajo}`));

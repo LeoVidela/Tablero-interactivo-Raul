@@ -246,3 +246,4 @@ export function semMin(value: number, obj: number, band: number): Sem { return v
 export function semMax(value: number, obj: number, band: number): Sem { return value <= obj ? 'good' : value <= obj + band ? 'warn' : 'bad'; }
 export type DeltaKind = 'pp' | 'abs' | 'pct';
 export function delta(kind: DeltaKind, cur: number, prev: number) { return kind === 'pct' ? ((cur - prev) / prev) * 100 : cur - prev; }
+export const lineIds = (u: UnitName) => LINES[u].map((d) => d.id);
