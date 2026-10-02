@@ -650,6 +650,8 @@
 :root[data-theme="light"] .art-photo.pic.big small{color:#627288}
 :root[data-theme="light"] .art-photo.real{background:#171717}
 :root[data-theme="light"] .art-photo.real.big small{background:rgba(0,0,0,0.33);color:#14161a}
+:root[data-theme="light"] .lf-btn{background:rgba(23,23,23,0.06);color:#141820}
+:root[data-theme="light"] .lf-btn:hover{background:rgba(255,107,26,.18)}
 
 /* ---------- ajustes manuales del modo claro ---------- */
 :root[data-theme="light"]{color-scheme:light}

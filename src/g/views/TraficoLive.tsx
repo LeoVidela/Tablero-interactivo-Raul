@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink, Maximize2, Radio, RefreshCw, Settings2, WifiOff, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Expand, ExternalLink, LayoutGrid, Maximize2, PanelRightClose, PanelRightOpen, Radio, RefreshCw, Settings2, Square, WifiOff, X } from 'lucide-react';
 import { UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName, hashStr, mulberry32 } from '../data';
 import { fmt } from '../ui';
 import { useOpenUnit } from '../openUnit';
@@ -137,23 +137,36 @@ function Screen({ u, bridge, br, onBig, iso, hour }: { u: UnitName; bridge: stri
   </motion.article>;
 }
 
-function BigScreen({ u, bridge, br, iso, hour, onClose }: { u: UnitName; bridge: string; br: Bridge; iso: string; hour: number; onClose: () => void }) {
+function BigScreen({ u, bridge, br, iso, hour, onClose, onNav }: { u: UnitName; bridge: string; br: Bridge; iso: string; hour: number; onClose: () => void; onNav?: (d: 1 | -1) => void }) {
   const ref = useRef<HTMLDivElement>(null); useTopEscape(ref, onClose);
+  const inner = useRef<HTMLDivElement>(null);
   const openUnit = useOpenUnit();
   const l = LIVE[u]; const real = !!l && br.online && !!br.feeds[l.feed];
   const day = useMemo(() => trafficDay(u, iso, hour), [u, iso, hour]);
   const [line, setLine] = useState<string | null>(null);
+  const [side, setSide] = useState(!real);
+  useEffect(() => setLine(null), [u]);
   const list = day.buses.filter((b) => b.estado === 'En servicio' && (!line || b.linea === line)).sort((a, b) => b.demora - a.demora);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === 'ArrowRight') onNav?.(1); if (e.key === 'ArrowLeft') onNav?.(-1); };
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+  }, [onNav]);
+  const fullscreen = () => { const el = inner.current; if (!el) return; if (document.fullscreenElement) document.exitFullscreen?.(); else el.requestFullscreen?.().catch(() => undefined); };
   return createPortal(<div ref={ref} data-modal="" className="modal-backdrop live-full" onClick={onClose}>
-    <div className="live-full-inner" onClick={(e) => e.stopPropagation()}>
-      <header><h3>{real ? 'Micronauta en vivo' : l ? 'Simulación' : 'Ejemplo'} · {u} · {VISTA[u]}</h3><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={18} /></button></header>
+    <div ref={inner} className={`live-full-inner ${side ? '' : 'noside'}`} onClick={(e) => e.stopPropagation()}>
+      <header><h3>{real ? 'Micronauta en vivo' : l ? 'Simulación' : 'Ejemplo'} · {u} · {VISTA[u]}</h3>
+        <div className="lf-tools">
+          {onNav && <><button className="icon-button" title="Sede anterior (←)" onClick={() => onNav(-1)}><ChevronLeft size={18} /></button><button className="icon-button" title="Sede siguiente (→)" onClick={() => onNav(1)}><ChevronRight size={18} /></button></>}
+          <button className="lf-btn" onClick={() => setSide(!side)}>{side ? <><PanelRightClose size={15} /> Ocultar lista</> : <><PanelRightOpen size={15} /> Ver coches</>}</button>
+          <button className="lf-btn" onClick={fullscreen} title="Pantalla completa (ideal para compartir en Meet)"><Expand size={15} /> Pantalla completa</button>
+          <button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={18} /></button></div></header>
       <div className="live-full-body">
         <div className="live-full-screen">{real ? <LiveImage src={`${bridge}/${l!.feed}.png`} every={br.intervalo} className="live-shot big" /> : <SimMap u={u} big buses={day.buses.filter((b) => !line || b.linea === line)} lines={day.lines} onBus={(id) => openUnit(id)} />}</div>
-        <aside className="live-full-side">
+        {side && <aside className="live-full-side">
           <div className="lf-lines"><button className={!line ? 'on' : ''} onClick={() => setLine(null)}>Todas</button>{day.lines.map((x) => <button key={x.line} className={line === x.line ? 'on' : ''} onClick={() => setLine(line === x.line ? null : x.line)}><i style={{ background: x.color }} />{x.line}</button>)}</div>
           <span className="section-kicker">Coches en calle · {list.length} · tocá uno para ver su ficha</span>
           <ul>{list.map((b) => <li key={b.bus.id}><button onClick={() => openUnit(b.bus.id)}><b>{b.bus.interno}</b><span>Línea {b.linea} · {fmt(b.km)} km hoy</span><em className={b.demora > 5 ? 'low' : 'ok'}>{b.demora ? `+${b.demora} min` : 'a horario'}</em></button></li>)}</ul>
-        </aside>
+        </aside>}
       </div>
     </div>
   </div>, document.body);
@@ -164,6 +177,8 @@ export function TraficoLive({ unit, notify }: { unit: UnitFilter; notify: (m: st
   const [bridge, setBridge] = useState(readBridge);
   const [cfg, setCfg] = useState(false);
   const [big, setBig] = useState<UnitName | null>(null);
+  const [layout, setLayout] = useState<'grande' | 'grilla'>(() => { try { return localStorage.getItem('live-layout') === 'grilla' ? 'grilla' : 'grande'; } catch { return 'grande'; } });
+  const setLay = (v: 'grande' | 'grilla') => { setLayout(v); try { localStorage.setItem('live-layout', v); } catch { /* sin almacenamiento */ } };
   const br = useBridge(bridge);
   const clock = useArClock(60_000);
   const { iso } = arNow(); const hour = clock.hour;
@@ -171,14 +186,14 @@ export function TraficoLive({ unit, notify }: { unit: UnitFilter; notify: (m: st
 
   return <section className="live-panel">
     <div className="section-header compact"><div><span className="section-kicker">Micronauta · tiempo real</span><h2>Flota en vivo</h2></div>
-      <div className="live-bridge"><span className={`live-tag ${br.online ? '' : 'off'}`}>{br.online ? <><Radio size={13} /> SERVICIO CONECTADO</> : <><WifiOff size={13} /> SERVICIO APAGADO</>}</span>
+      <div className="live-bridge"><div className="sn-chips inline" role="group" aria-label="Tamaño de las pantallas"><button className={layout === 'grande' ? 'active' : ''} onClick={() => setLay('grande')}><Square size={13} /> Grandes</button><button className={layout === 'grilla' ? 'active' : ''} onClick={() => setLay('grilla')}><LayoutGrid size={13} /> Grilla</button></div><span className={`live-tag ${br.online ? '' : 'off'}`}>{br.online ? <><Radio size={13} /> SERVICIO CONECTADO</> : <><WifiOff size={13} /> SERVICIO APAGADO</>}</span>
         <button className="icon-button" title="Dirección del servicio en vivo" onClick={() => setCfg(!cfg)}><Settings2 size={16} /></button></div></div>
     {cfg && <form className="live-cfg" onSubmit={(e) => { e.preventDefault(); saveBase(String(new FormData(e.currentTarget).get('u') ?? '')); }}>
       <label>Servicio en vivo<input name="u" defaultValue={bridge} placeholder={DEFAULT_BRIDGE} /></label><button type="submit" className="export-button">Guardar</button>
       <small>En la PC que corre <code>micronauta-live</code> es <code>{DEFAULT_BRIDGE}</code>; desde otra PC de la red, <code>http://IP-de-esa-PC:8765</code>.</small></form>}
 
-    <div className={`live-streams n${list.length}`}>{list.map((u) => <Screen key={u} u={u} bridge={bridge} br={br} iso={iso} hour={hour} onBig={() => setBig(u)} />)}</div>
-    {big && <BigScreen u={big} bridge={bridge} br={br} iso={iso} hour={hour} onClose={() => setBig(null)} />}
+    <div className={`live-streams n${list.length} ${layout === 'grande' ? 'big' : ''}`}>{list.map((u) => <Screen key={u} u={u} bridge={bridge} br={br} iso={iso} hour={hour} onBig={() => setBig(u)} />)}</div>
+    {big && <BigScreen u={big} bridge={bridge} br={br} iso={iso} hour={hour} onClose={() => setBig(null)} onNav={list.length > 1 ? (d) => setBig(list[(list.indexOf(big) + d + list.length) % list.length]) : undefined} />}
 
     <TraficoGeneral unit={unit} iso={iso} hour={hour} />
   </section>;
