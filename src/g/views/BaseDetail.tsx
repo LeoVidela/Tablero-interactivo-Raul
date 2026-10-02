@@ -12,7 +12,7 @@ import { useTopEscape } from '../esc';
 import type { MetricKey } from '../metrics';
 
 const CITY: Record<UnitName, string> = { 'Córdoba': 'Córdoba Capital', Comodoro: 'Comodoro Rivadavia', 'San Luis': 'San Luis Capital', 'Villa Mercedes': 'Villa Mercedes' };
-const LIVE: Partial<Record<UnitName, string>> = { 'Córdoba': 'Vista Corredores', Comodoro: 'Activos' };
+const LIVE: Partial<Record<UnitName, string>> = { 'Córdoba': 'Vista Corredores', Comodoro: 'Vista Corredores' };
 
 export function BaseDetail({ base, onClose }: { base: UnitName; onClose: () => void }) {
   const drill = useDrill(); const openUnit = useOpenUnit();

@@ -13,9 +13,9 @@ import { TraficoGeneral } from './TraficoGeneral';
 /** Flotas con vista en vivo de Micronauta (servidas por micronauta-live/micronauta_live.py). */
 const LIVE: Partial<Record<UnitName, { feed: string; vista: string; usuario: string }>> = {
   'Córdoba': { feed: 'cordoba', vista: 'Vista Corredores', usuario: 'svidela' },
-  Comodoro: { feed: 'comodoro', vista: 'Activos', usuario: 'leonardov' },
+  Comodoro: { feed: 'comodoro', vista: 'Vista Corredores', usuario: 'leonardov' },
 };
-const VISTA: Record<UnitName, string> = { 'Córdoba': 'Vista Corredores', Comodoro: 'Activos', 'San Luis': 'Corredores (ejemplo)', 'Villa Mercedes': 'Activos (ejemplo)' };
+const VISTA: Record<UnitName, string> = { 'Córdoba': 'Vista Corredores', Comodoro: 'Vista Corredores', 'San Luis': 'Corredores (ejemplo)', 'Villa Mercedes': 'Activos (ejemplo)' };
 const MICRONAUTA = 'https://micronauta.dnsalias.net/megaweb/psw/login.php';
 const DEFAULT_BRIDGE = 'http://localhost:8765';
 const readBridge = () => { try { return localStorage.getItem('micronauta-live-url') || DEFAULT_BRIDGE; } catch { return DEFAULT_BRIDGE; } };

@@ -5,7 +5,7 @@ Servicio chico que corre en una PC con Chrome, entra a Micronauta con Selenium y
 | Flota | Usuario | Vista que queda en pantalla |
 |---|---|---|
 | Córdoba | `svidela` | Vistas → Vista Corredores |
-| Comodoro | `leonardov` | Vistas → Activos |
+| Comodoro | `leonardov` | Vistas → Vista Corredores |
 
 ## Puesta en marcha (Windows)
 

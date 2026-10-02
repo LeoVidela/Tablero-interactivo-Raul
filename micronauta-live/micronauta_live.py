@@ -4,7 +4,7 @@ Micronauta en vivo para el Tablero Solbus
 =========================================
 
 Abre Micronauta con Selenium (un Chrome por flota), inicia sesión, navega a la vista configurada
-(Córdoba: Vistas → Vista Corredores · Comodoro: Vistas → Activos) y publica la pantalla en vivo
+(Córdoba: Vistas → Vista Corredores · Comodoro: Vistas → Vista Corredores) y publica la pantalla en vivo
 por HTTP para que la pestaña Tráfico del tablero la muestre:
 
     http://localhost:8765/status          estado de cada flota (JSON)
@@ -70,7 +70,7 @@ FEEDS = {
         'label': 'Comodoro',
         'user': os.environ.get('COMODORO_USER', 'leonardov'),
         'password': os.environ.get('COMODORO_PASSWORD', ''),
-        'steps': [s for s in os.environ.get('COMODORO_PASOS', 'Vistas|Activos').split('|') if s.strip()],
+        'steps': [s for s in os.environ.get('COMODORO_PASOS', 'Vistas|Vista Corredores').split('|') if s.strip()],
     },
 }
 INTERVAL = float(os.environ.get('INTERVALO_SEGUNDOS', '3'))          # cada cuánto se toma una captura
