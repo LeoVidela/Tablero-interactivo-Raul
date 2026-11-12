@@ -3,8 +3,9 @@
 // proyecciones de cambio y de compra). Al conectarlo se reemplaza por el maestro de artículos y sus fotos.
 import { UNIT_NAMES, UnitFilter, UnitName, hashStr, mulberry32, unitsOf } from './data';
 import { BUSES, Bus, dstr } from './taller';
+import { CORTE } from '../data/window';
 
-export const HOY = new Date(2026, 9, 1, 12);
+export const HOY = new Date(CORTE.getFullYear(), CORTE.getMonth(), CORTE.getDate() + 1, 12); // día siguiente al corte
 const DAY = 86400000;
 
 // ---------- categorías del sistema de pañol ----------

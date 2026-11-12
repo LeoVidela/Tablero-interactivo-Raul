@@ -1,5 +1,7 @@
-import { materialByCode, templates } from './catalog';
+import { componentById, materialByCode, templates } from './catalog';
+import { SNAP, markReal, warn, type SnapOT, type SnapUnidad } from './source';
 import type { Base, MaterialLine, OTStatus, Unit, UnitStatus, WorkOrder } from './types';
+import { CORTE } from './window';
 
 /* Generador determinístico: siempre produce la misma flota ficticia. */
 function mulberry32(seed: number) {
@@ -15,7 +17,8 @@ const between = (min: number, max: number) => min + rand() * (max - min);
 const int = (min: number, max: number) => Math.floor(between(min, max + 1));
 const pick = <T,>(items: T[]) => items[Math.floor(rand() * items.length)];
 const DAY = 86_400_000;
-const today = new Date(2026, 8, 30, 9, 0, 0, 0); // fecha de corte de la demo (alineada con los tableros de Gerencia)
+const today = CORTE; // fecha de corte (último día del último mes de la ventana)
+const YEAR_F = today.getFullYear() + (today.getMonth() + 1) / 12 - 0.05; // año con decimales, para estimar km por antigüedad
 
 type BaseSeed = { name: string; code: string; city: string; color: string; first: number; count: number; lines: string[]; mechanics: string[]; services: number; punctuality: number; absenteeism: number; passengers: number; alerts: number };
 
@@ -66,15 +69,40 @@ function buildOrder(unit: Omit<Unit, 'orders' | 'status'>, mechanics: string[], 
   };
 }
 
+// ---------- flota y OT reales (snapshot · bloques «unidades» y «ot») ----------
+const norm = (s: unknown) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+const STATUS_IN: [RegExp, UnitStatus][] = [[/repuesto/, 'Esperando repuesto'], [/fuera|baja|radiad/, 'Fuera de servicio'], [/taller|repar|deten/, 'En taller'], [/./, 'Operativo']];
+const toStatus = (s: unknown): UnitStatus | null => (s == null || s === '' ? null : STATUS_IN.find(([re]) => re.test(norm(s)))![1]);
+const REAL_UNITS = new Map<string, SnapUnidad[]>();
+for (const u of SNAP?.unidades ?? []) { if (u && u.base && u.interno != null) { const l = REAL_UNITS.get(u.base) ?? []; l.push({ ...u, interno: String(u.interno) }); REAL_UNITS.set(u.base, l); } }
+/** Bases con OT reales en el snapshot: en esas bases no se generan OT de demostración. */
+const REAL_OT_BASES = new Set((SNAP?.ot ?? []).map((o) => o.base));
+const REAL_OT = REAL_OT_BASES.size > 0;
+export const FLEET_REAL = { unidades: [...REAL_UNITS.keys()], ot: [...REAL_OT_BASES] };
+
 function buildUnits(seed: BaseSeed): Unit[] {
-  return Array.from({ length: seed.count }, (_, i) => {
-    const year = int(2012, 2024);
+  const real = REAL_UNITS.get(seed.name);
+  return Array.from({ length: real ? real.length : seed.count }, (_, i) => {
+    const ru = real?.[i];
+    const year = ru?.anio && ru.anio > 1980 ? ru.anio : int(2012, 2024);
     const dailyKm = between(170, 235);
-    const km = Math.round((2026.7 - year) * dailyKm * 300 + between(-15000, 15000));
+    const km = typeof ru?.km === 'number' && ru.km >= 0 ? Math.round(ru.km) : Math.round((YEAR_F - year) * dailyKm * 300 + between(-15000, 15000));
     const base: Omit<Unit, 'orders' | 'status'> = {
-      interno: String(seed.first + i), base: seed.name, plate: plateFor(year), chassis: pick(chassisModels), body: pick(bodies), year, km,
-      lastServiceKm: km - int(1500, 33500), lastPreventiveKm: km - int(800, 23000), line: pick(seed.lines),
+      interno: ru ? ru.interno : String(seed.first + i), base: seed.name, plate: ru?.dominio || plateFor(year), chassis: ru?.chasis || pick(chassisModels), body: ru?.carroceria || pick(bodies), year, km,
+      lastServiceKm: typeof ru?.ultServiceKm === 'number' ? ru.ultServiceKm : km - int(1500, 33500), lastPreventiveKm: typeof ru?.ultPreventivoKm === 'number' ? ru.ultPreventivoKm : km - int(800, 23000), line: ru?.linea || pick(seed.lines),
     };
+    if (REAL_OT_BASES.has(seed.name)) return { ...base, status: toStatus(ru?.estado) ?? 'Operativo', orders: [] }; // sus OT llegan del snapshot
+    if (ru) {
+      const st = toStatus(ru.estado);
+      if (st) { // estado real: las OT siguen siendo de demostración hasta que llegue el bloque «ot»
+        const orders: WorkOrder[] = Array.from({ length: int(5, 14) }, () => buildOrder(base, seed.mechanics, int(3, 365), dailyKm, 'Cerrada'));
+        if (st === 'En taller') orders.push(buildOrder(base, seed.mechanics, int(0, 2), dailyKm, pick(['Abierta', 'En curso'])));
+        else if (st === 'Esperando repuesto') orders.push(buildOrder(base, seed.mechanics, int(2, 9), dailyKm, 'Esperando repuesto'));
+        else if (st === 'Fuera de servicio') { const o = buildOrder(base, seed.mechanics, int(1, 14), dailyKm, pick(['En curso', 'Esperando repuesto'])); o.priority = 'Alta'; orders.push(o); }
+        orders.sort((a, b) => b.opened.getTime() - a.opened.getTime());
+        return { ...base, status: st, orders };
+      }
+    }
     const orders: WorkOrder[] = Array.from({ length: int(5, 14) }, () => buildOrder(base, seed.mechanics, int(3, 365), dailyKm, 'Cerrada'));
     const r = rand();
     let status: UnitStatus = 'Operativo';
@@ -96,7 +124,7 @@ function schedulePlan(u: Unit) {
   const seed = baseSeeds.find((b) => b.name === u.base)!;
   const r = mulberry32(20260930 + Number(u.interno) * 7919);
   const ri = (a: number, b: number) => a + Math.floor(r() * (b - a + 1));
-  const dailyKm = u.km / Math.max(300, (2026.7 - u.year) * 300);
+  const dailyKm = u.km / Math.max(300, (YEAR_F - u.year) * 300);
   u.orders = u.orders.filter((o) => !(PLAN_TITLES.includes(o.title) && o.status === 'Cerrada'));
   const add = (type: 'Preventivo 20K' | 'Service 30K', every: number) => {
     const t = templates.find((x) => x.type === type && PLAN_TITLES.includes(x.title))!;
@@ -117,10 +145,48 @@ function schedulePlan(u: Unit) {
   u.orders.sort((a, b) => b.opened.getTime() - a.opened.getTime());
 }
 const PREVENTIVE_KM_ = 20000; const SERVICE_KM_ = 30000;
-units.forEach(schedulePlan);
+const TYPE_IN: [RegExp, WorkOrder['type']][] = [[/service|30/, 'Service 30K'], [/prevent|20/, 'Preventivo 20K'], [/auxilio|sos/, 'Auxilio en calle'], [/siniestro|choque/, 'Siniestro'], [/./, 'Correctivo']];
+const OTSTATUS_IN: [RegExp, OTStatus][] = [[/cerr|final|termin|cumpl/, 'Cerrada'], [/repuesto/, 'Esperando repuesto'], [/curso|proceso|repar/, 'En curso'], [/./, 'Abierta']];
+const UNITS_OK = ['u', 'lts', 'kg', 'm', 'jgo', 'kit'];
+/** 'AAAA-MM-DD' se interpreta como fecha local (no UTC) para que no cambie de día ni de mes. */
+const parseDay = (v: string, hour = 9) => { const x = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v)); return x ? new Date(Number(x[1]), Number(x[2]) - 1, Number(x[3]), hour) : new Date(v); };
+function realOrder(o: SnapOT, u: Unit): WorkOrder | null {
+  const opened = parseDay(o.abierta); if (isNaN(opened.getTime())) return null;
+  const closedD = o.cerrada ? parseDay(o.cerrada, 18) : undefined; let closed = closedD && !isNaN(closedD.getTime()) ? closedD : undefined;
+  const type = TYPE_IN.find(([re]) => re.test(norm(o.tipo)))![1];
+  const status: OTStatus = closed ? 'Cerrada' : OTSTATUS_IN.find(([re]) => re.test(norm(o.estado)))![1];
+  if (status === 'Cerrada' && !closed) closed = opened; // cerrada sin fecha de cierre: se toma la de apertura
+  const comps = (o.componentes ?? []).filter((c) => componentById[c]);
+  const pr = norm(o.prioridad);
+  return {
+    id: String(o.id), unit: u.interno, base: u.base, type, status,
+    priority: /alta|urg/.test(pr) ? 'Alta' : /baja/.test(pr) ? 'Baja' : type === 'Auxilio en calle' || type === 'Siniestro' ? 'Alta' : 'Media',
+    opened, closed, km: Math.max(0, Math.round(o.km ?? u.km)), origin: o.origen || 'Sistema de taller', components: comps.length ? comps : ['chasis'],
+    title: o.titulo || (type === 'Preventivo 20K' ? 'Preventivo 20.000 km' : type === 'Service 30K' ? 'Service 30.000 km' : 'Trabajo de taller'), diagnosis: o.diagnostico || 'Sin diagnóstico cargado.',
+    mechanic: o.mecanico || 'Sin asignar', hours: Math.max(0, Number(o.horas) || 0),
+    materials: (o.materiales ?? []).filter((m) => m && m.nombre).map((m) => ({ code: String(m.codigo ?? ''), name: m.nombre, unit: (UNITS_OK.includes(String(m.unidad)) ? m.unidad : 'u') as MaterialLine['unit'], qty: Number(m.cantidad) || 0, price: Number(m.precio) || 0, origin: (/compra/.test(norm(m.origen)) ? 'Compra directa' : /recup/.test(norm(m.origen)) ? 'Recuperado' : 'Pañol') as MaterialLine['origin'] })),
+  };
+}
+if (REAL_OT) {
+  const byId = Object.fromEntries(units.map((u) => [u.interno, u])) as Record<string, Unit>;
+  let lost = 0;
+  for (const o of SNAP!.ot!) { const u = byId[String(o.interno)]; const w = u && realOrder(o, u); if (w) u.orders.push(w); else lost++; }
+  if (lost) warn(`ot: ${lost} órdenes sin coche conocido o sin fecha de apertura (no se muestran)`);
+  const lastKm = (u: Unit, t: WorkOrder['type']) => u.orders.filter((o) => o.type === t && o.status === 'Cerrada').reduce((mx, o) => Math.max(mx, o.km), 0);
+  units.filter((u) => REAL_OT_BASES.has(u.base)).forEach((u) => {
+    u.orders.sort((a, b) => b.opened.getTime() - a.opened.getTime());
+    const ru = REAL_UNITS.get(u.base)?.find((x) => x.interno === u.interno);
+    if (typeof ru?.ultPreventivoKm !== 'number') u.lastPreventiveKm = lastKm(u, 'Preventivo 20K') || u.km;
+    if (typeof ru?.ultServiceKm !== 'number') u.lastServiceKm = lastKm(u, 'Service 30K') || u.km;
+    if (!toStatus(ru?.estado)) { const op = u.orders.find((o) => o.status !== 'Cerrada'); if (op) u.status = op.status === 'Esperando repuesto' ? 'Esperando repuesto' : 'En taller'; } // sin estado informado: lo dan sus OT abiertas
+  });
+}
+units.filter((u) => !REAL_OT_BASES.has(u.base)).forEach(schedulePlan);
 export const orders: WorkOrder[] = units.flatMap((u) => u.orders).sort((a, b) => a.opened.getTime() - b.opened.getTime());
-orders.forEach((o) => { o.id = `OT-${String(4200 + ++otSeq)}`; });
+orders.forEach((o) => { if (!o.id) o.id = `OT-${String(4200 + ++otSeq)}`; });
 orders.reverse();
+FLEET_REAL.unidades.forEach((b) => markReal('flota.unidades', b, 11));
+FLEET_REAL.ot.forEach((b) => markReal('taller.ot', b, 11));
 
 export const unitById = Object.fromEntries(units.map((u) => [u.interno, u])) as Record<string, Unit>;
 
@@ -134,7 +200,8 @@ export const bases: Base[] = baseSeeds.map((s) => {
   };
 });
 
-export const mechanicsByBase = Object.fromEntries(baseSeeds.map((s) => [s.name, s.mechanics])) as Record<string, string[]>;
+/** Mecánicos por base: los de las OT reales cuando existen; si no, los de demostración. */
+export const mechanicsByBase = Object.fromEntries(baseSeeds.map((s) => { const real = REAL_OT_BASES.has(s.name) ? [...new Set(orders.filter((o) => o.base === s.name && o.mechanic !== 'Sin asignar').map((o) => o.mechanic))] : []; return [s.name, real.length ? real : s.mechanics]; })) as Record<string, string[]>;
 
 export const SERVICE_KM = 30000;
 export const PREVENTIVE_KM = 20000;

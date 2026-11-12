@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CircleDot, Package, BusFront, Building2, ChevronRight, ClipboardList, CornerDownLeft, Keyboard, LayoutDashboard, MousePointerClick, Moon, RotateCcw, Search, Sun, UserRound, Wrench, X } from 'lucide-react';
 import { orders as ALL_ORDERS, mechanicsByBase, units as ALL_UNITS } from '../../data/fleet';
-import { MONTH_LABELS, UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName } from '../data';
+import { MONTH_FULL, UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName } from '../data';
 import { DRIVERS } from '../siniestros';
 import { METRICS, MetricKey, Target } from '../metrics';
 import { useDrill } from '../drill';
@@ -111,7 +111,7 @@ const CMP: MetricKey[] = ['cumpl', 'reg', 'disp', 'aux', 'aus', 'cob', 'sin', 'e
 export function Comparativa({ onClose }: { onClose: () => void }) {
   const drill = useDrill(); const m = 11;
   const vals = useMemo(() => CMP.map((k) => ({ k, row: UNIT_NAMES.map((u) => METRICS[k].get(u, m)), all: METRICS[k].get('Todos', m) })), []);
-  return <Modal kicker={`Comparativa entre bases · ${MONTH_LABELS[m]} 2026`} title="Las 4 unidades de negocio" onClose={onClose} wide>
+  return <Modal kicker={`Comparativa entre bases · ${MONTH_FULL[m]}`} title="Las 4 unidades de negocio" onClose={onClose} wide>
     <div className="g-table-wrap"><table className="g-table clickable cmp-table"><thead><tr><th>Indicador</th>{UNIT_NAMES.map((u) => <th key={u}><button className="cmp-base" onClick={() => { onClose(); drill.openBase(u); }}><i style={{ background: UNIT_COLOR[u] }} />{u}</button></th>)}<th>Grupo</th></tr></thead>
       <tbody>{vals.map(({ k, row, all }) => { const d = METRICS[k]; const best = d.goodUp ? Math.max(...row) : Math.min(...row); const worst = d.goodUp ? Math.min(...row) : Math.max(...row);
         return <tr key={k}><td><b>{d.label}</b></td>{row.map((v, i) => <td key={i} className={v === best ? 'ok' : v === worst ? 'low' : ''} onClick={() => { onClose(); drill.openMetric(k, { unit: UNIT_NAMES[i] as UnitName }); }}>{d.fmt(v)}</td>)}<td onClick={() => { onClose(); drill.openMetric(k, { unit: 'Todos' }); }}>{d.fmt(all)}</td></tr>; })}</tbody></table></div>

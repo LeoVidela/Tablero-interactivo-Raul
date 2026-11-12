@@ -1,5 +1,6 @@
 // Taller y Mantenimiento para los tableros de Gerencia, calculado sobre la flota y las OT reales de la base
 // (data/fleet.ts): mismos internos, mismas órdenes, mismos materiales que ve la ficha técnica del coche.
+import { CORTE } from '../data/window';
 import { componentById, systems } from '../data/catalog';
 import { PREVENTIVE_KM, SERVICE_KM, mechanicsByBase, orderCost, orders as ALL_ORDERS, units as ALL_UNITS } from '../data/fleet';
 import type { SystemGroup, Unit, UnitStatus, WorkOrder } from '../data/types';
@@ -14,7 +15,7 @@ export const LABOR_RATE = 9800; // $/hora (mock)
 export type BusEstado = 'Operativa' | 'En reparación' | 'Esperando repuestos' | 'Fuera de servicio';
 const EST: Record<UnitStatus, BusEstado> = { Operativo: 'Operativa', 'En taller': 'En reparación', 'Esperando repuesto': 'Esperando repuestos', 'Fuera de servicio': 'Fuera de servicio' };
 export interface Bus { id: string; interno: number; dominio: string; unit: UnitName; modelo: string; carroceria: string; linea: string; km: number; anio: number; ot12: number; salud: number; estado: BusEstado; raw: Unit }
-const END = new Date(2026, 8, 30, 12);
+const END = new Date(CORTE.getFullYear(), CORTE.getMonth(), CORTE.getDate(), 12);
 const DAY = 86400000;
 export const BUSES: Bus[] = ALL_UNITS.map((u) => {
   const ot12 = u.orders.filter((o) => END.getTime() - o.opened.getTime() <= 365 * DAY).length;

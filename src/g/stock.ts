@@ -1,4 +1,5 @@
 // Stock de pañol por base: consumo real de materiales en las OT (últimos 90 días) y niveles de stock demostrativos.
+import { CORTE } from '../data/window';
 import { componentById, materials } from '../data/catalog';
 import { orders as ALL_ORDERS } from '../data/fleet';
 import type { WorkOrder } from '../data/types';
@@ -10,7 +11,7 @@ export interface StockRow {
   stock: number; min: number; consumoMes: number; cobertura: number; estado: StockEstado; valor: number; sugerido: number;
   porBase: { u: UnitName; stock: number; consumoMes: number }[];
 }
-const END = new Date(2026, 8, 30, 23, 59).getTime();
+const END = new Date(CORTE.getFullYear(), CORTE.getMonth(), CORTE.getDate(), 23, 59).getTime();
 const D90 = 90 * 86400000;
 
 function consumo(code: string, u: UnitName) {

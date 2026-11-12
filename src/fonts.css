@@ -1,0 +1,8 @@
+/* Tipografías incluidas en el tablero (sin depender de Google Fonts): se ven igual sin conexión y en el HTML de un solo archivo. */
+@font-face{font-family:'DM Sans';font-style:normal;font-display:swap;font-weight:100 1000;src:url('@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2') format('woff2-variations')}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-display:swap;font-weight:300 700;src:url('@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2') format('woff2-variations')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-display:swap;font-weight:100 800;src:url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations')}
+.boot{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;background:#080b14;color:#8c96ac;font:500 13px 'DM Sans',system-ui,sans-serif}
+.boot-ring{width:34px;height:34px;border-radius:50%;border:3px solid #ffffff14;border-top-color:#ff6b1a;animation:boot-spin .8s linear infinite}
+:root[data-theme="light"] .boot{background:#f5f6fa;color:#5b657a}
+@keyframes boot-spin{to{transform:rotate(360deg)}}

@@ -10,8 +10,9 @@ export const UNIT_FILTERS: UnitFilter[] = ['Todos', ...UNIT_NAMES];
 export const UNIT_COLOR: Record<UnitName, string> = { 'Córdoba': '#E85818', Comodoro: '#199e70', 'San Luis': '#c98500', 'Villa Mercedes': '#d55181' };
 export const UNIT_CODE: Record<UnitName, string> = { 'Córdoba': 'COR', Comodoro: 'COM', 'San Luis': 'SLU', 'Villa Mercedes': 'VME' };
 
-export const MONTH_LABELS = ['Oct', 'Nov', 'Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep'];
-export const MONTH_FULL = ['Octubre 2025', 'Noviembre 2025', 'Diciembre 2025', 'Enero 2026', 'Febrero 2026', 'Marzo 2026', 'Abril 2026', 'Mayo 2026', 'Junio 2026', 'Julio 2026', 'Agosto 2026', 'Septiembre 2026'];
+import { MONTH_FULL, MONTH_LABELS, idxOfYm, monthEndDate, monthIdx, monthStart, monthYear } from '../data/window';
+import { SNAP, markReal, warn, type SnapMensual } from '../data/source';
+export { MONTH_FULL, MONTH_LABELS, monthEndDate, monthIdx, monthStart };
 export const LAST_MONTH = 11;
 
 // ---------- utilidades ----------
@@ -63,7 +64,8 @@ export interface MonthRow {
   otClosed: number; otOpen: number; prevDone: number; prevPend: number; reinc: number; itcVenc: number; itc30: number; itc60: number;
   enRep: number; espRep: number; fuera: number; repTime: number; personal: number; horas: number; lts: number; kmpl: number;
 }
-const SEASON_KM = [0, 0.01, -0.03, -0.05, -0.06, 0.02, 0.01, 0.02, 0, -0.03, 0.02, 0.03];
+const SEASON_BY_MONTH = [-0.05, -0.06, 0.02, 0.01, 0.02, 0, -0.03, 0.02, 0.03, 0, 0.01, -0.03]; // estacionalidad por mes calendario (ene … dic)
+const SEASON_KM = Array.from({ length: 12 }, (_, i) => SEASON_BY_MONTH[monthStart(i).getMonth()]);
 
 function genUnit(unit: UnitName): MonthRow[] {
   const p0 = PROFILES[unit]; const fs = FLEET_SIZE[unit] / p0.fleet;
@@ -106,10 +108,6 @@ export const DATA: Record<UnitName, MonthRow[]> = {
 };
 
 // ---------- sincronización con las OT reales de la base ----------
-/** Índice de mes (0 = oct-2025 … 11 = sep-2026) de una fecha. */
-export const monthIdx = (d: Date) => (d.getFullYear() - 2025) * 12 + d.getMonth() - 9;
-export const monthStart = (m: number) => new Date(2025, 9 + m, 1);
-export const monthEndDate = (m: number) => new Date(2025, 9 + m + 1, 0, 23, 59, 59);
 export const isPlanOrder = (o: { title: string }) => o.title === 'Preventivo 20.000 km' || o.title === 'Service 30.000 km';
 /** Coches con preventivo o service vencido / por vencer (a la fecha de corte). */
 export const dueCount = (u: UnitName) => ALL_UNITS.filter((x) => x.base === u).reduce((n, x) => n + (x.km - x.lastPreventiveKm >= PREVENTIVE_KM ? 1 : 0) + (x.km - x.lastServiceKm >= SERVICE_KM ? 1 : 0), 0);
@@ -144,6 +142,25 @@ for (const u of UNIT_NAMES) {
   const last = DATA[u][11];
   last.enRep = list.filter((x) => x.status === 'En taller').length; last.espRep = list.filter((x) => x.status === 'Esperando repuesto').length; last.fuera = list.filter((x) => x.status === 'Fuera de servicio').length;
   last.out = last.enRep + last.espRep + last.fuera; last.oper = last.total - last.out; last.disp = (last.oper / last.total) * 100;
+}
+
+// ---------- datos reales (snapshot de la base) ----------
+/* Cada fila «mensual» del snapshot reemplaza, para su base y mes, los campos que traiga. Lo que no venga queda en demo.
+   Se aplica al final para que lo real pise tanto al generador como a lo calculado desde las OT. */
+const FIELDS: (keyof MonthRow & keyof SnapMensual)[] = ['kmProg', 'kmExec', 'reg', 'total', 'oper', 'out', 'aux', 'aus', 'cob', 'sin', 'exc', 'cost', 'inc', 'pax', 'otClosed', 'otOpen', 'prevDone', 'prevPend', 'reinc', 'itcVenc', 'itc30', 'itc60', 'enRep', 'espRep', 'fuera', 'repTime', 'personal', 'horas', 'lts'];
+/** Campos derivados: se consideran reales cuando lo son todos sus componentes. */
+export const DERIVED: Record<string, string[]> = { cumpl: ['kmExec', 'kmProg'], disp: ['oper', 'total'], ipk: ['pax', 'kmExec'], kmpl: ['kmExec', 'lts'], margin: ['inc', 'cost'] };
+for (const row of SNAP?.mensual ?? []) {
+  const u = row.base as UnitName; const m = idxOfYm(String(row.mes));
+  if (!(UNIT_NAMES as readonly string[]).includes(u)) { warn(`mensual: base desconocida «${row.base}»`); continue; }
+  if (m < 0 || m > 11) continue; // fuera de la ventana de 12 meses
+  const dst = DATA[u][m];
+  for (const k of FIELDS) { const v = row[k]; if (typeof v === 'number' && isFinite(v)) { dst[k] = v; markReal(k, u, m); } }
+  if (dst.kmProg > 0) dst.cumpl = (dst.kmExec / dst.kmProg) * 100;
+  if (typeof row.oper === 'number' && typeof row.out !== 'number') dst.out = Math.max(0, dst.total - dst.oper);
+  if (typeof row.out === 'number' && typeof row.oper !== 'number') dst.oper = Math.max(0, dst.total - dst.out);
+  if (dst.total > 0) dst.disp = (dst.oper / dst.total) * 100;
+  if (dst.kmExec > 0) { dst.ipk = dst.pax / dst.kmExec; if (dst.lts > 0) dst.kmpl = dst.kmExec / dst.lts; }
 }
 
 export const unitsOf = (f: UnitFilter): UnitName[] => (f === 'Todos' ? [...UNIT_NAMES] : [f]);
@@ -200,9 +217,7 @@ export function objectives(filter: UnitFilter, nMonths: number) {
 // ---------- períodos ----------
 export interface PeriodDef { id: string; label: string; short: string; months: number[]; prev: number[]; quarter: boolean }
 export const PERIODS: PeriodDef[] = [
-  { id: 'q3', label: 'Jul – Sep 2026 (trimestre)', short: 'Jul – Sep 2026', months: [9, 10, 11], prev: [6, 7, 8], quarter: true },
-  { id: 'q2', label: 'Abr – Jun 2026 (trimestre)', short: 'Abr – Jun 2026', months: [6, 7, 8], prev: [3, 4, 5], quarter: true },
-  { id: 'q1', label: 'Ene – Mar 2026 (trimestre)', short: 'Ene – Mar 2026', months: [3, 4, 5], prev: [0, 1, 2], quarter: true },
+  ...([['q3', 9], ['q2', 6], ['q1', 3]] as [string, number][]).map(([id, a]) => { const short = `${MONTH_LABELS[a]} – ${MONTH_LABELS[a + 2]} ${monthYear(a + 2)}`; return { id, label: `${short} (trimestre)`, short, months: [a, a + 1, a + 2], prev: [a - 3, a - 2, a - 1], quarter: true }; }),
   ...[11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((m) => ({ id: `m${m}`, label: MONTH_FULL[m], short: MONTH_FULL[m], months: [m], prev: [m - 1], quarter: false })),
 ];
 

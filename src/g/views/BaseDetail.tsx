@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, ArrowRight, BusFront, ChevronRight, Fuel, Gauge, Radio, Route, ShieldAlert, Timer, Users, Wallet, Wrench, X } from 'lucide-react';
-import { MONTH_LABELS, OBJ, UNIT_CODE, UNIT_COLOR, UnitName, aggregate, lineRows } from '../data';
+import { MONTH_FULL, MONTH_LABELS, OBJ, UNIT_CODE, UNIT_COLOR, UnitName, aggregate, lineRows } from '../data';
 import { AXIS, TOOLTIP_STYLE, fmt, money, pct } from '../ui';
 import { busesOf, tallerData } from '../taller';
 import { sinData } from '../siniestros';
@@ -41,7 +41,7 @@ export function BaseDetail({ base, onClose }: { base: UnitName; onClose: () => v
 
   return <motion.div ref={ref} data-modal="" className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
     <motion.aside className="detail-drawer base-detail" style={{ ['--tone' as string]: color }} initial={{ x: '100%' }} animate={{ x: 0 }} transition={{ type: 'spring', damping: 28 }} onClick={(e) => e.stopPropagation()}>
-      <div className="drawer-header"><div><span className="section-kicker">Unidad de negocio · {UNIT_CODE[base]}</span><h2>{base}</h2><small>{CITY[base]} · Septiembre 2026 · {a.total} coches · {lines.length} líneas</small></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button></div>
+      <div className="drawer-header"><div><span className="section-kicker">Unidad de negocio · {UNIT_CODE[base]}</span><h2>{base}</h2><small>{CITY[base]} · {MONTH_FULL[11]} · {a.total} coches · {lines.length} líneas</small></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button></div>
 
       <button className="bd-hero" onClick={() => metric('cumpl')}>
         <div><span>Cumplimiento de km</span><strong>{pct(a.cumpl)}</strong><small>{fmt(a.kmExec)} km ejecutados de {fmt(a.kmProg)} programados</small></div>

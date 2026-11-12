@@ -1,6 +1,8 @@
 // Datos demo de RR.HH.: resumen mensual por área y análisis individual por legajo.
 import { DATA, FLEET_SIZE, UNIT_NAMES, UnitFilter, UnitName, clamp, distribute, hashStr, mulberry32, unitsOf } from './data';
 import { dstr } from './taller';
+import { CORTE, daysInMonth, idxOfYm, monthDate } from '../data/window';
+import { SNAP, markReal, type SnapRRHH } from '../data/source';
 
 export const AREAS = ['Conducción', 'Técnica', 'Tráfico', 'Administración'] as const;
 export type Area = (typeof AREAS)[number];
@@ -11,7 +13,16 @@ const SALARY: Record<Area, number> = { 'Conducción': 1_850_000, 'Técnica': 1_7
 export interface HRTotals { activos: number; altas: number; bajas: number; ausDias: number; ausPct: number; artCant: number; artDias: number; carpCant: number; carpDias: number; susCant: number; susDias: number; remun: number; feriados: number; guardias: number }
 const STAFF = (u: UnitName) => Math.round(FLEET_SIZE[u] * 2.35);
 
+const HR_FIELDS: (keyof HRTotals & keyof SnapRRHH)[] = ['activos', 'altas', 'bajas', 'ausDias', 'ausPct', 'artCant', 'artDias', 'carpCant', 'carpDias', 'susCant', 'susDias', 'remun', 'feriados', 'guardias'];
+/** RR.HH. real por base y mes (snapshot · bloque «rrhh_mensual»): pisa campo por campo al valor demo. */
+const HR_REAL = new Map<string, SnapRRHH>();
+for (const row of SNAP?.rrhh_mensual ?? []) { const m = idxOfYm(String(row.mes)); if (m >= 0 && m <= 11 && (UNIT_NAMES as readonly string[]).includes(row.base)) { HR_REAL.set(`${row.base}|${m}`, row); HR_FIELDS.forEach((k) => { if (typeof row[k] === 'number') markReal(`hr.${k}`, row.base, m); }); } }
 function unitMonth(u: UnitName, m: number): HRTotals {
+  const t = unitMonthDemo(u, m); const real = HR_REAL.get(`${u}|${m}`);
+  if (real) for (const k of HR_FIELDS) { const v = real[k]; if (typeof v === 'number' && isFinite(v)) t[k] = v; }
+  return t;
+}
+function unitMonthDemo(u: UnitName, m: number): HRTotals {
   const r = mulberry32(hashStr(`hr-${u}-${m}`)); const n = () => r() * 2 - 1;
   const st = STAFF(u); const k = st / 295;
   const activos = Math.round(st * (0.945 + m * 0.0055) + n() * 1.5);
@@ -49,7 +60,7 @@ const SECTOR: Record<Area, string[]> = { 'Conducción': ['Línea 1', 'Línea 2',
 const SUPERVISOR: Record<Area, string> = { 'Conducción': 'Jefe de Tráfico', 'Técnica': 'Jefe de Taller', 'Tráfico': 'Jefe de Tráfico', 'Administración': 'Gerente Administrativo' };
 const LEG_BASE: Record<UnitName, number> = { 'Córdoba': 1001, Comodoro: 2001, 'San Luis': 3001, 'Villa Mercedes': 4001 };
 export interface Emp { legajo: number; nombre: string; unit: UnitName; area: Area; sector: string; puesto: string; turno: string; ingreso: string; antig: string; supervisor: string; convenio: string }
-const END = new Date(2026, 8, 30);
+const END = new Date(CORTE.getFullYear(), CORTE.getMonth(), CORTE.getDate());
 const PUESTO: Record<Area, (sector: string) => string> = {
   'Conducción': () => 'Chofer de colectivo',
   'Técnica': (s) => ({ 'Taller mecánico': 'Mecánico', 'Electricidad': 'Electricista', 'Carrocería': 'Carrocero', 'Gomería': 'Gomero' } as Record<string, string>)[s] ?? 'Mecánico',
@@ -72,8 +83,7 @@ const POOL: Record<UnitName, Record<Area, Emp[]>> = Object.fromEntries(UNIT_NAME
 export const EMPS: Emp[] = UNIT_NAMES.flatMap((u) => AREAS.flatMap((a) => POOL[u][a]));
 
 // ---------- listas del mes (detalle de cada indicador) ----------
-const monthDate = (m: number, day: number) => new Date(m < 3 ? 2025 : 2026, (9 + m) % 12, day);
-const daysIn = (m: number) => new Date(m < 3 ? 2025 : 2026, (9 + m) % 12 + 1, 0).getDate();
+const daysIn = daysInMonth;
 export interface Alta { emp: Emp; fecha: string; motivo: string; contrato: string }
 export interface Baja { emp: Emp; fecha: string; motivo: string }
 export interface Ausencia { emp: Emp; fecha: string; dias: number; tipo: string; justificada: boolean }
@@ -132,7 +142,7 @@ export function riskLevel(n: Nov): { label: 'BUENO' | 'REGULAR' | 'ATENCIÓN'; t
 export interface HistItem { fecha: string; tipo: string; detalle: string; dias: string }
 export function empHistory(e: Emp, mIdx: number, n: Nov): HistItem[] {
   const r = mulberry32(hashStr(`hist-${e.legajo}-${mIdx}`));
-  const y = mIdx < 3 ? 2025 : 2026; const mo = (9 + mIdx) % 12; const day = () => dstr(new Date(y, mo, 1 + Math.floor(r() * 27)));
+  const day = () => dstr(monthDate(mIdx, 1 + Math.floor(r() * 27)));
   const pick = (a: string[]) => a[Math.floor(r() * a.length)];
   const items: HistItem[] = [];
   if (n.aus) items.push({ fecha: day(), tipo: 'Ausencia', detalle: pick(['Ausencia injustificada', 'Ausencia con aviso', 'Trámite personal']), dias: String(n.aus) });

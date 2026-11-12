@@ -1,5 +1,6 @@
 // Siniestros e incidentes: eventos demostrativos coherentes con data.ts (siniestros por mes/unidad),
 // con conductores, coches, reparaciones y seguimiento económico.
+import { monthDate } from '../data/window';
 import { DATA, UNIT_NAMES, UnitFilter, UnitName, hashStr, mulberry32, unitsOf } from './data';
 import { Bus, BUSES, dstr, monthEnd } from './taller';
 import { materials as CATALOG, componentById } from '../data/catalog';
@@ -64,7 +65,7 @@ function build() {
     for (let m = 0; m < 12; m++) {
       const row = DATA[u][m]; const r = mulberry32(hashStr(`sin-${u}-${m}`));
       const nS = row.sin; const nI = Math.round(row.sin * 1.5 + (r() < 0.5 ? 0 : 1));
-      const mk = () => { const day = 1 + Math.floor(r() * 28); return new Date(2025, 9 + m, day); };
+      const mk = () => { const day = 1 + Math.floor(r() * 28); return monthDate(m, day); };
       const dr = () => pick(r, DRIVERS[u], (d) => d.w); const bs = () => (r() < 0.5 ? hot[Math.floor(r() * hot.length)] : buses[Math.floor(r() * buses.length)]);
       for (let i = 0; i < nS; i++) {
         const date = mk(); const x = r();

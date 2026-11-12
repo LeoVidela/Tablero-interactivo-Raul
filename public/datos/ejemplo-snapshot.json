@@ -1,0 +1,62 @@
+{
+ "meta": {
+  "generado": "2026-11-11T09:00:00-03:00",
+  "hasta": "2026-10",
+  "corte": "2026-10-31",
+  "fuentes": [
+   {
+    "id": "trafico_cba",
+    "nombre": "Tráfico Córdoba (km y pasajeros)",
+    "tipo": "planilla",
+    "estado": "ok",
+    "ultima_carga": "2026-11-11T06:00:00-03:00",
+    "corte": "2026-10-31",
+    "filas": 214,
+    "frescura": "al día"
+   },
+   {
+    "id": "flitmo",
+    "nombre": "Flitmo (RR.HH.)",
+    "tipo": "api",
+    "estado": "sin cargar",
+    "ultima_carga": null,
+    "corte": null,
+    "filas": 0,
+    "frescura": "sin cargar"
+   }
+  ]
+ },
+ "mensual": [
+  {
+   "base": "Córdoba",
+   "mes": "2026-10",
+   "kmProg": 712400,
+   "kmExec": 698120,
+   "pax": 1061500,
+   "lts": 228900,
+   "sin": 4
+  },
+  {
+   "base": "Córdoba",
+   "mes": "2026-09",
+   "kmProg": 690100,
+   "kmExec": 681300,
+   "pax": 1040200
+  },
+  {
+   "base": "Comodoro",
+   "mes": "2026-10",
+   "kmProg": 678390,
+   "kmExec": 661200
+  }
+ ],
+ "rrhh_mensual": [
+  {
+   "base": "Córdoba",
+   "mes": "2026-10",
+   "activos": 293,
+   "altas": 3,
+   "bajas": 1
+  }
+ ]
+}

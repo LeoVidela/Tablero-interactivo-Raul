@@ -7,6 +7,7 @@ import { useOpenUnit } from '../openUnit';
 import { useDrill } from '../drill';
 import { PendEstado, PendRow, ProdRow, correctivos, pendientes, plan, planEvolution, production } from '../mant';
 import { C, Donut, TD, Tile } from './shared';
+import { corteTxt } from '../../data/window';
 
 const P_TONE: Record<PendEstado, string> = { PENDIENTE: 'bad', 'EN TALLER': 'warn', PROGRAMADO: 'good' };
 const rate = (a: number, b: number) => (b ? (a / b) * 100 : 100);
@@ -66,7 +67,7 @@ export function MantTab({ unit, m, setM, notify }: { unit: UnitFilter; m: number
         <tbody>{(more.pend ? rows : rows.slice(0, 8)).map((r, i) => <tr key={r.bus.id + r.tipo} className={r.dias > 30 ? 'row-bad' : ''} onClick={() => openUnit(r.bus.id, { order: r.order })}><td><b>{r.bus.interno}</b>{unit === 'Todos' && <small className="sn-unit"><i style={{ background: UNIT_COLOR[r.bus.unit] }} /></small>}</td><td>{r.tipo}</td><td>{r.programado}</td><td>{fmt(r.km)}</td><td>{r.venc}</td><td><b>{r.dias}</b></td><td><span className={`pill mini ${P_TONE[r.estado]}`}>{r.estado}</span></td><td>{r.asignado}</td></tr>)}
           {!rows.length && <tr><td colSpan={8} className="empty-cell">Sin pendientes para este filtro.</td></tr>}</tbody></table></div>
       {rows.length > 8 && <button className="text-button sn-more" onClick={() => tgl('pend')}>{more.pend ? 'Ver menos' : `Ver los ${rows.length}`}</button>}
-      <p className="sn-hint block">Los pendientes permanecen visibles mes a mes hasta su cumplimiento · estado a la fecha de corte (30/09/2026), según el plan por km de cada coche (20.000 km preventivo · 30.000 km service).</p></Panel>
+      <p className="sn-hint block">Los pendientes permanecen visibles mes a mes hasta su cumplimiento · estado a la fecha de corte ({corteTxt}), según el plan por km de cada coche (20.000 km preventivo · 30.000 km service).</p></Panel>
 
     <Panel kicker={pMonth} title="Tareas correctivas realizadas" right={<span className="sn-hint">Detalle por unidad, sector y personal que efectuó la reparación</span>}>
       <div className="g-table-wrap tall"><table className="g-table clickable"><thead><tr><th>Fecha</th><th>Interno</th><th>Correctivo realizado</th><th>Sector</th><th>Realizado por</th><th>Estado</th><th>Hs. taller</th></tr></thead>

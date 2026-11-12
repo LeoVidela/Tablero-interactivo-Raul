@@ -11,6 +11,9 @@
     "theme:light": "python3 scripts/gen-light-theme.py"
   },
   "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
     "framer-motion": "^11.11.11",
     "lucide-react": "^0.469.0",
     "react": "^18.3.1",
