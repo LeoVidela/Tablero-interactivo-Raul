@@ -18,6 +18,8 @@ import { tankState, tanksOf } from '../tanques';
 import { trafficDay } from '../trafico';
 import { arNow } from '../views/Greeting';
 import { fmt, money, moneyM, pct } from '../ui';
+import { isAdmin } from '../admin';
+import { iaReady } from './ia';
 
 // ---------- tipos ----------
 export type Action =
@@ -124,6 +126,7 @@ const MOD_LABEL: Record<Target, string> = { Resumen: 'Resumen', Tráfico: 'Tráf
 
 // ---------- piezas de respuesta ----------
 const covNote = (k: MetricKey, u: UnitFilter, m: number) => {
+  if (!isAdmin()) return '';
   const c = coverage(k, u, m);
   if (c === 'real') return '';
   if (c === 'parcial') return `\nDato real solo en ${realBases(k, m).join(', ')}; el resto es de demostración.`;
@@ -392,7 +395,9 @@ function contractAnswer(): Answer {
 }
 
 function helpAnswer(): Answer {
-  return { intent: 'ayuda', text: `Soy el asistente del tablero. Respondo con los mismos datos que ves en pantalla; no uso ninguna IA externa ni tengo costo. Puedo ayudarte con:\n• ${B('Indicadores')}: valor, objetivo, evolución, ranking y comparación entre bases.\n• ${B('Flota y taller')}: un coche por interno, una OT, detenidos, preventivos vencidos, reincidencias, productividad.\n• ${B('RR.HH. y seguridad')}: ausentismo, un legajo, siniestros, conductores, reclamos.\n• ${B('Combustible y pañol')}: tanques, rendimiento, stock de un artículo, cubiertas a cambiar.\n• ${B('Sistemas')}: estado de la conexión, qué datos son reales, qué falta y cómo conectar la base.`, next: ['Resumen del mes', '¿Qué está fuera de objetivo?', 'Interno 512', '¿Qué falta para sacar los datos demo?'] };
+  const adm = isAdmin();
+  const intro = iaReady() ? 'Soy el asistente del tablero. Respondo con los mismos datos que ves en pantalla y redacto la respuesta con Gemini.' : 'Soy el asistente del tablero. Respondo con los mismos datos que ves en pantalla.';
+  return { intent: 'ayuda', text: `${intro} Puedo ayudarte con:\n• ${B('Indicadores')}: valor, objetivo, evolución, ranking y comparación entre bases.\n• ${B('Flota y taller')}: un coche por interno, una OT, detenidos, preventivos vencidos, reincidencias, productividad.\n• ${B('RR.HH. y seguridad')}: ausentismo, un legajo, siniestros, conductores, reclamos.\n• ${B('Combustible y pañol')}: tanques, rendimiento, stock de un artículo, cubiertas a cambiar.${adm ? `\n• ${B('Sistemas')}: estado de la conexión, qué datos son reales, qué falta y cómo conectar la base.` : ''}`, next: ['Resumen del mes', '¿Qué está fuera de objetivo?', 'Interno 512', adm ? '¿Qué falta para sacar los datos demo?' : '¿Qué base necesita más atención?'] };
 }
 
 // ---------- intérprete ----------
@@ -413,7 +418,9 @@ export function answer(raw: string, ctx: Ctx): { a: Answer; mem: Memory } {
   if (hasRe(q, /(^| )(ayuda|que podes hacer|que sabes hacer|que puedo preguntar|como te uso|para que servis|que haces)( |$)/)) return done(helpAnswer());
   if (hasRe(q, /^(gracias|muchas gracias|genial|perfecto|ok|listo|dale)( |$)/)) return done({ intent: 'cortesia', text: 'De nada. Cuando quieras seguimos.', next: ['Resumen del mes', '¿Qué está fuera de objetivo?'] });
 
-  // --- Sistemas
+  // --- Sistemas (solo en modo Sistemas: Gerencia no ve conexión, fuentes ni datos faltantes)
+  const SIS = [/como (conecto|conectar|se conecta|enlazo|configuro)|conectar (la )?base|configurar (la )?(fuente|base|conexion)|pasos para conectar/, /formato|contrato|snapshot|json|que (campos|bloques)|estructura del (archivo|snapshot)/, /tablas|esquema|base limpia|modelo de datos|estructura de la base/, /que falta|faltan|faltantes|pendientes de datos|cero demo|sacar (los )?(datos )?demo|datos que faltan|para completar/, /(son|es|esta|estan) (real|reales|demo)|datos reales|datos demo|que (datos|indicadores) son|cobertura de datos|avance|porcentaje de avance|de demostracion/, /fuente|fuentes|conexion|conectad|supabase|base de datos|ultima (carga|actualizacion)|cuando se actualizo|de donde (sale|salen|viene|vienen)|origen de los datos|estado de la (base|carga)|sincroniz|errores de carga|avisos/];
+  if (!isAdmin() && SIS.some((re) => re.test(q))) return done({ intent: 'reservado', text: 'Esa consulta es interna del área de Sistemas. Puedo ayudarte con los indicadores, la flota, el taller, RR.HH., la seguridad, el combustible y el pañol.', next: ['Resumen del mes', '¿Qué está fuera de objetivo?', '¿Qué base necesita más atención?'] });
   if (hasRe(q, /como (conecto|conectar|se conecta|enlazo|configuro)|conectar (la )?base|configurar (la )?(fuente|base|conexion)|pasos para conectar/)) return done(connectAnswer());
   if (hasRe(q, /formato|contrato|snapshot|json|que (campos|bloques)|estructura del (archivo|snapshot)/)) return done(contractAnswer());
   if (hasRe(q, /tablas|esquema|base limpia|modelo de datos|estructura de la base/)) return done(schemaAnswer());

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, ArrowUpRight, Bot, Database, Eraser, Sparkles, X } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Bot, Database, Eraser, Loader2, Sparkles, X } from 'lucide-react';
 import type { UnitFilter } from '../data';
 import type { Target } from '../metrics';
 import { useDrill } from '../drill';
@@ -8,11 +8,13 @@ import { useOpenUnit } from '../openUnit';
 import { STARTERS, answer, type Action, type Answer, type Memory } from './engine';
 import { sourceLabel } from '../coverage';
 import { SOURCE } from '../../data/source';
+import { isAdmin } from '../admin';
+import { askIa, goesToIa, iaReady, type IaTurn } from './ia';
 
 /** Abre el asistente desde cualquier pantalla (opcionalmente con una pregunta ya enviada). */
 export const askAssistant = (q?: string) => window.dispatchEvent(new CustomEvent('solbus-ask', { detail: q ?? '' }));
 
-interface Msg { id: number; q?: string; a?: Answer }
+interface Msg { id: number; q?: string; a?: Answer; ia?: 'cargando' | 'ok' | 'local' }
 const KEY = 'solbus-asistente';
 const load = (): string[] => { try { const x = JSON.parse(sessionStorage.getItem(KEY) ?? '[]'); return Array.isArray(x) ? x.filter((s) => typeof s === 'string').slice(-12) : []; } catch { return []; } };
 const save = (qs: string[]) => { try { sessionStorage.setItem(KEY, JSON.stringify(qs.slice(-12))); } catch { /* sin almacenamiento */ } };
@@ -37,16 +39,23 @@ export function Asistente({ unit, module, onPanel }: { unit: UnitFilter; module:
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [who, setWho] = useState<'gerencia' | 'sistemas'>('gerencia');
-  const mem = useRef<Memory>({}); const seq = useRef(0); const boxRef = useRef<HTMLDivElement>(null); const inputRef = useRef<HTMLInputElement>(null);
+  const mem = useRef<Memory>({}); const hist = useRef<IaTurn[]>([]); const seq = useRef(0); const boxRef = useRef<HTMLDivElement>(null); const inputRef = useRef<HTMLInputElement>(null);
   const ctx = useRef({ unit, module }); ctx.current = { unit, module };
   const restored = useRef(false);
 
   const ask = useCallback((q: string, remember = true) => {
     const clean = q.trim(); if (!clean) return;
     const r = answer(clean, { ...ctx.current, mem: mem.current }); mem.current = r.mem;
-    setMsgs((m) => [...m, { id: ++seq.current, q: clean, a: r.a }]);
+    const id = ++seq.current; const useIa = remember && iaReady() && goesToIa(r.a);
+    setMsgs((m) => [...m, { id, q: clean, a: r.a, ia: useIa ? 'cargando' : undefined }]);
     if (remember) save([...load(), clean]);
     setText('');
+    if (useIa) {
+      const month = r.mem.month ?? 11; const unit = r.mem.unit ?? ctx.current.unit;
+      askIa(clean, r.a, unit, month, hist.current)
+        .then((texto) => { hist.current = [...hist.current, { q: clean, a: texto }].slice(-4); setMsgs((m) => m.map((x) => (x.id === id && x.a ? { ...x, a: { ...x.a, text: texto }, ia: 'ok' } : x))); })
+        .catch(() => setMsgs((m) => m.map((x) => (x.id === id ? { ...x, ia: 'local' } : x))));
+    }
   }, []);
 
   // restaura la conversación de esta sesión volviendo a preguntar (las respuestas se recalculan con los datos actuales)
@@ -69,32 +78,34 @@ export function Asistente({ unit, module, onPanel }: { unit: UnitFilter; module:
     else if (a.kind === 'panel') onPanel(a.panel);
     if (window.innerWidth < 900) setOpen(false);
   };
-  const starters = useMemo(() => (who === 'sistemas' ? STARTERS.sistemas : [...STARTERS.porModulo(module).slice(0, 3), ...STARTERS.gerencia.filter((s) => !STARTERS.porModulo(module).includes(s))].slice(0, 7)), [who, module]);
-  const clear = () => { setMsgs([]); mem.current = {}; save([]); };
+  const admin = isAdmin(); const ia = iaReady();
+  const starters = useMemo(() => (admin && who === 'sistemas' ? STARTERS.sistemas : [...STARTERS.porModulo(module).slice(0, 3), ...STARTERS.gerencia.filter((s) => !STARTERS.porModulo(module).includes(s))].slice(0, 7)), [who, module, admin]);
+  const clear = () => { setMsgs([]); mem.current = {}; hist.current = []; save([]); };
 
   return <>
     <button className={`as-fab ${open ? 'hidden' : ''}`} onClick={() => setOpen(true)} aria-label="Abrir el asistente" title="Asistente del tablero (Ctrl + K)"><Sparkles size={18} /><span>Asistente</span></button>
     <AnimatePresence>{open && <motion.aside className="as-panel" role="dialog" aria-label="Asistente del tablero" initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 40, opacity: 0 }} transition={{ type: 'spring', damping: 30, stiffness: 320 }}>
       <header className="as-head">
         <span className="as-logo"><Bot size={19} /></span>
-        <div><strong>Asistente del tablero</strong><small><i className={`as-dot ${SOURCE.modo}`} />{sourceLabel()} · {unit === 'Todos' ? 'Grupo Solbus' : unit}</small></div>
+        <div><strong>Asistente del tablero</strong><small>{admin && <><i className={`as-dot ${SOURCE.modo}`} />{sourceLabel()} · </>}{ia ? 'Con Gemini' : 'Datos del tablero'} · {unit === 'Todos' ? 'Grupo Solbus' : unit}</small></div>
         <button className="icon-button" onClick={clear} title="Borrar la conversación" aria-label="Borrar la conversación" disabled={!msgs.length}><Eraser size={16} /></button>
         <button className="icon-button" onClick={() => setOpen(false)} aria-label="Cerrar el asistente"><X size={17} /></button>
       </header>
       <div className="as-body" ref={boxRef}>
         {!msgs.length && <div className="as-welcome">
           <h3>¿Qué querés saber?</h3>
-          <p>Preguntá en tus palabras. Respondo con los mismos datos que muestra el tablero, sin conexión a ninguna IA externa y sin costo.</p>
-          <div className="as-who" role="tablist"><button role="tab" aria-selected={who === 'gerencia'} className={who === 'gerencia' ? 'on' : ''} onClick={() => setWho('gerencia')}><Sparkles size={14} /> Gerencia</button><button role="tab" aria-selected={who === 'sistemas'} className={who === 'sistemas' ? 'on' : ''} onClick={() => setWho('sistemas')}><Database size={14} /> Sistemas</button></div>
+          <p>Preguntá en tus palabras. Respondo con los mismos datos que muestra el tablero{ia ? ' y Gemini redacta la respuesta' : ''}.</p>
+          {admin && <div className="as-who" role="tablist"><button role="tab" aria-selected={who === 'gerencia'} className={who === 'gerencia' ? 'on' : ''} onClick={() => setWho('gerencia')}><Sparkles size={14} /> Gerencia</button><button role="tab" aria-selected={who === 'sistemas'} className={who === 'sistemas' ? 'on' : ''} onClick={() => setWho('sistemas')}><Database size={14} /> Sistemas</button></div>}
           <div className="as-starters">{starters.map((s) => <button key={s} onClick={() => ask(s)}>{s}<ArrowUpRight size={13} /></button>)}</div>
         </div>}
         {msgs.map((m, mi) => <div key={m.id} className="as-turn">
           {m.q && <div className="as-q"><span>{m.q}</span></div>}
           {m.a && <motion.div className="as-a" data-intent={m.a.intent} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-            <Rich text={m.a.text} />
+            {m.ia === 'cargando' ? <p className="as-thinking"><Loader2 size={14} className="spin" /> Redactando con Gemini…</p> : <Rich text={m.a.text} />}
             {m.a.spark && <Spark s={m.a.spark} />}
             {m.a.table && <div className="as-table-wrap"><table className="as-table"><thead><tr>{m.a.table.head.map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{m.a.table.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>)}</tbody></table>{m.a.table.note && <small>{m.a.table.note}</small>}</div>}
             {m.a.actions && m.a.actions.length > 0 && <div className="as-actions">{m.a.actions.map((a, i) => <button key={i} onClick={() => run(a)}>{a.label}<ArrowUpRight size={13} /></button>)}</div>}
+            {m.ia === 'ok' && <small className="as-badge"><Sparkles size={11} /> Gemini · basado en los datos del tablero</small>}
             {mi === msgs.length - 1 && m.a.next && <div className="as-next">{m.a.next.map((s) => <button key={s} onClick={() => ask(s)}>{s}</button>)}</div>}
           </motion.div>}
         </div>)}

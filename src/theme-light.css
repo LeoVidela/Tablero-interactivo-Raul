@@ -742,6 +742,8 @@
 :root[data-theme="light"] .fx-details ul{color:#394255}
 :root[data-theme="light"] .fx-details code,:root[data-theme="light"] .fx-empty code,:root[data-theme="light"] .fx-foot code{color:#0357b4}
 :root[data-theme="light"] .fx-foot{color:#5c6780}
+:root[data-theme="light"] .as-thinking{color:#535d73}
+:root[data-theme="light"] .as-badge{background:rgba(66,133,244,.14);color:#0a49ad}
 
 /* ---------- ajustes manuales del modo claro ---------- */
 :root[data-theme="light"]{color-scheme:light}

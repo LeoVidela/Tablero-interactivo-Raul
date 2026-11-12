@@ -8,6 +8,7 @@ import { useTopEscape } from '../esc';
 import { METRICS, MetricKey, Target, metricByUnit, metricSeries } from '../metrics';
 import { COV_LABEL, coverage, realBases } from '../coverage';
 import { askAssistant } from '../asistente/Asistente';
+import { isAdmin } from '../admin';
 
 const MODULE_LABEL: Record<Target, string> = { Resumen: 'Resumen', Tráfico: 'Tráfico', Flota: 'Flota', Taller: 'Taller', RRHH: 'RR.HH.', Combustible: 'Combustible', Seguridad: 'Siniestros y Seguridad', Pañol: 'Pañol' };
 
@@ -35,7 +36,7 @@ export function MetricDrawer({ k, unit, month = 11, onClose, onGo }: { k: Metric
 
   return <motion.div ref={ref} data-modal="" className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
     <motion.aside className="detail-drawer metric-drawer" initial={{ x: '100%' }} animate={{ x: 0 }} transition={{ type: 'spring', damping: 28 }} onClick={(e) => e.stopPropagation()}>
-      <div className="drawer-header"><div><span className="section-kicker">{MODULE_LABEL[def.module]} · indicador</span><h2>{def.label}</h2><small>{u === 'Todos' ? 'Todas las unidades de negocio' : u} · {MONTH_FULL[m]}</small><span className={`cov-chip ${cov}`} title={cov === 'parcial' ? `Real en ${covBases.join(', ')}` : cov === 'real' ? 'Viene de la base conectada' : 'Todavía no tiene fuente conectada'}><i />{COV_LABEL[cov]}{cov === 'parcial' && covBases.length ? ` · ${covBases.join(', ')}` : ''}</span></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button></div>
+      <div className="drawer-header"><div><span className="section-kicker">{MODULE_LABEL[def.module]} · indicador</span><h2>{def.label}</h2><small>{u === 'Todos' ? 'Todas las unidades de negocio' : u} · {MONTH_FULL[m]}</small>{isAdmin() && <span className={`cov-chip ${cov}`} title={cov === 'parcial' ? `Real en ${covBases.join(', ')}` : cov === 'real' ? 'Viene de la base conectada' : 'Todavía no tiene fuente conectada'}><i />{COV_LABEL[cov]}{cov === 'parcial' && covBases.length ? ` · ${covBases.join(', ')}` : ''}</span>}</div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button></div>
       <div className="md-units"><UnitSelector value={u} onChange={setU} /></div>
       <div className={`md-hero ${ok === null ? '' : ok ? 'good' : 'bad'}`}>
         <div><span>Valor del mes</span><strong>{def.fmt(cur)}</strong>

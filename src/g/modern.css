@@ -125,3 +125,5 @@ main .g-table tbody tr,main .t-legend li,main .t-hbars li{cursor:pointer}
 @media(prefers-reduced-motion:reduce){.as-fab,.as-starters button,.panel-expand{transition:none}}
 /* con una ventana abierta, el botón del asistente no tapa su contenido */
 body:has([data-modal]) .as-fab,body:has(.sheet-backdrop) .as-fab,body:has(.live-full) .as-fab{opacity:0;pointer-events:none}
+.as-thinking{display:flex;align-items:center;gap:8px;margin:0;color:#8c96ac;font-size:12px}
+.as-badge{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:3px 9px;border-radius:20px;background:rgba(66,133,244,.14);color:#8ab4f8;font-size:10.5px;font-weight:600}

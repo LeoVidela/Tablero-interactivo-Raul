@@ -5,6 +5,9 @@ import { METRICS } from '../src/g/metrics';
 import { aggregate, UNIT_NAMES } from '../src/g/data';
 import { units, orders, isOpen } from '../src/data/fleet';
 import { hrTotals } from '../src/g/rrhh';
+import { setAdmin } from '../src/g/admin';
+
+setAdmin(true); // las preguntas de Sistemas se prueban en modo Sistemas; abajo se verifica que Gerencia no las vea
 
 type Case = [q: string, intent: string, includes?: string | string[]];
 const d = METRICS; const f = (k: keyof typeof METRICS, u: Parameters<typeof d.aus.get>[0], m = 11) => d[k].fmt(d[k].get(u, m));
@@ -109,5 +112,10 @@ for (const [q, intent, inc] of chain) { const r = answer(q, { unit: 'Todos', mod
 const r2 = answer('disponibilidad', { unit: 'San Luis', module: 'Flota', mem: {} }); if (!r2.a.text.includes(f('disp', 'San Luis'))) { fail++; console.log('✗ no respetó la unidad activa'); }
 // coherencia con el agregado del tablero
 if (Math.abs(d.cumpl.get('Todos', 11) - aggregate('Todos', [11]).cumpl) > 1e-9 || UNIT_NAMES.length !== 4) { fail++; console.log('✗ el catálogo no coincide con el agregado'); }
-console.log(`${cases.length + chain.length + 2} pruebas · ${fail} fallas`);
+// en modo Gerencia las preguntas técnicas no muestran conexión, fuentes ni faltantes
+setAdmin(false);
+const priv = ['Estado de la conexión', '¿Qué falta para sacar los datos demo?', '¿Cómo conecto la base?', '¿Qué tablas tiene la base?', 'porcentaje de avance', 'supabase'];
+for (const q of priv) { const r = answer(q, { unit: 'Todos', module: 'Resumen', mem: {} }); if (r.a.intent !== 'reservado') { fail++; console.log(`✗ Gerencia ve «${q}» → ${r.a.intent}`); } }
+for (const q of ['ausentismo', 'hola']) { const t = answer(q, { unit: 'Todos', module: 'Resumen', mem: {} }).a.text; if (/demostraci|Sistemas|fuente|conexi/i.test(t)) { fail++; console.log(`✗ Gerencia ve datos internos en «${q}»: ${t.slice(0, 120)}`); } }
+console.log(`${cases.length + chain.length + 2 + priv.length + 2} pruebas · ${fail} fallas`);
 process.exit(fail ? 1 : 0);
