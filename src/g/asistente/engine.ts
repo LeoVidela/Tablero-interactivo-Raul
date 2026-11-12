@@ -46,7 +46,7 @@ export interface Ctx { unit: UnitFilter; module: Target; mem: Memory }
 export const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[¿?¡!.,;:()"«»]/g, ' ').replace(/\s+/g, ' ').trim();
 const has = (q: string, ...words: string[]) => words.some((w) => new RegExp(`(^| )${w}( |$)`).test(q));
 const hasRe = (q: string, re: RegExp) => re.test(q);
-const plural = (n: number, s: string, p = `${s}s`) => `${fmt(n)} ${n === 1 ? s : p}`;
+const plural = (n: number, s: string, p = /[aeiouáéó]$/i.test(s) ? `${s}s` : `${s}es`) => `${fmt(n)} ${n === 1 ? s : p}`;
 const B = (s: string | number) => `**${s}**`;
 const unitTxt = (u: UnitFilter) => (u === 'Todos' ? 'el grupo' : u);
 const inUnit = (u: UnitFilter) => (u === 'Todos' ? 'en todo el grupo' : `en ${u}`);
