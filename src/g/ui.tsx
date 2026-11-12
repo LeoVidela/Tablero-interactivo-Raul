@@ -1,5 +1,6 @@
-import React from 'react';
-import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
+import React, { useRef } from 'react';
+import { ArrowDownRight, ArrowUpRight, Maximize2, Minus } from 'lucide-react';
+import { explorable, usePanelExplore } from './inspect';
 import { UNIT_COLOR, UNIT_FILTERS, DeltaKind, Sem, UnitFilter, UnitName } from './data';
 
 export const fmt = (v: number, d = 0) => v.toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -34,8 +35,11 @@ export function DeltaChip({ value, kind, goodUp = true, digits = 1, suffix, labe
 export function SemDot({ sem }: { sem: Sem }) { return <i className={`sem sem-${sem}`} aria-label={sem === 'good' ? 'En objetivo' : sem === 'warn' ? 'Atención' : 'Fuera de objetivo'} />; }
 
 export function Panel({ title, kicker, right, children, className = '' }: { title?: React.ReactNode; kicker?: string; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
-  return <div className={`panel g-panel ${className}`}>
-    {(title || right) && <div className="g-panel-head"><div>{kicker && <span className="section-kicker">{kicker}</span>}{title && <h3>{title}</h3>}</div>{right}</div>}
+  const ref = useRef<HTMLDivElement>(null);
+  const open = usePanelExplore(ref, title, kicker, children);
+  const can = explorable(children);
+  return <div ref={ref} data-panel="" className={`panel g-panel ${can ? 'has-explore' : ''} ${className}`}>
+    {(title || right || can) && <div className="g-panel-head"><div>{kicker && <span className="section-kicker">{kicker}</span>}{title && <h3>{title}</h3>}</div>{right}{can && <button className="panel-expand" onClick={open} title="Ampliar y ver los datos" aria-label="Ampliar y ver los datos"><Maximize2 size={14} /></button>}</div>}
     {children}
   </div>;
 }

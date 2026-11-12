@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Info, X } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Info, Sparkles, X } from 'lucide-react';
 import { MONTH_FULL, MONTH_LABELS, UNIT_COLOR, UNIT_NAMES, UnitFilter } from '../data';
 import { AXIS, GRID, TOOLTIP_STYLE, UnitSelector, fmt } from '../ui';
 import { useTopEscape } from '../esc';
 import { METRICS, MetricKey, Target, metricByUnit, metricSeries } from '../metrics';
+import { COV_LABEL, coverage, realBases } from '../coverage';
+import { askAssistant } from '../asistente/Asistente';
 
 const MODULE_LABEL: Record<Target, string> = { Resumen: 'Resumen', Tráfico: 'Tráfico', Flota: 'Flota', Taller: 'Taller', RRHH: 'RR.HH.', Combustible: 'Combustible', Seguridad: 'Siniestros y Seguridad', Pañol: 'Pañol' };
 
@@ -28,11 +30,12 @@ export function MetricDrawer({ k, unit, month = 11, onClose, onGo }: { k: Metric
   const span = Math.max(...series.map((x) => x.v)) - Math.min(...series.map((x) => x.v));
   const dec = span < 5 ? (span < 0.5 ? 2 : 1) : 0;
   const tick = (v: number) => (Math.abs(v) >= 1e6 ? `${fmt(v / 1e6, 1)}M` : Math.abs(v) >= 1e4 ? `${fmt(v / 1e3, 0)}k` : fmt(v, dec));
+  const cov = coverage(k, u, m); const covBases = cov === 'parcial' ? realBases(k, m) : [];
   const diffTxt = (x: number) => (isPct ? `${fmt(Math.abs(x), 1)} pp` : def.fmt(Math.abs(x)));
 
   return <motion.div ref={ref} data-modal="" className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
     <motion.aside className="detail-drawer metric-drawer" initial={{ x: '100%' }} animate={{ x: 0 }} transition={{ type: 'spring', damping: 28 }} onClick={(e) => e.stopPropagation()}>
-      <div className="drawer-header"><div><span className="section-kicker">{MODULE_LABEL[def.module]} · indicador</span><h2>{def.label}</h2><small>{u === 'Todos' ? 'Todas las unidades de negocio' : u} · {MONTH_FULL[m]}</small></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button></div>
+      <div className="drawer-header"><div><span className="section-kicker">{MODULE_LABEL[def.module]} · indicador</span><h2>{def.label}</h2><small>{u === 'Todos' ? 'Todas las unidades de negocio' : u} · {MONTH_FULL[m]}</small><span className={`cov-chip ${cov}`} title={cov === 'parcial' ? `Real en ${covBases.join(', ')}` : cov === 'real' ? 'Viene de la base conectada' : 'Todavía no tiene fuente conectada'}><i />{COV_LABEL[cov]}{cov === 'parcial' && covBases.length ? ` · ${covBases.join(', ')}` : ''}</span></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><X size={19} /></button></div>
       <div className="md-units"><UnitSelector value={u} onChange={setU} /></div>
       <div className={`md-hero ${ok === null ? '' : ok ? 'good' : 'bad'}`}>
         <div><span>Valor del mes</span><strong>{def.fmt(cur)}</strong>
@@ -58,6 +61,7 @@ export function MetricDrawer({ k, unit, month = 11, onClose, onGo }: { k: Metric
           return <tr key={s.i} className={s.i === m ? 'row-active' : ''} onClick={() => setM(s.i)}><td>{MONTH_FULL[s.i]}</td><td><b>{def.fmt(s.v)}</b></td><td className={g === null ? '' : g ? 'ok' : 'low'}>{dd === null ? '—' : `${dd >= 0 ? '+' : '−'}${diffTxt(dd)}`}</td>{u === 'Todos' && UNIT_NAMES.map((x) => <td key={x}>{def.fmt(METRICS[k].get(x, s.i))}</td>)}</tr>; })}</tbody></table></div>
 
       <p className="md-desc"><Info size={13} /> {def.desc}</p>
+      <button className="drawer-cta secondary" onClick={() => { onClose(); askAssistant(`${def.label}${u === 'Todos' ? '' : ` en ${u}`}`); }}><Sparkles size={15} /> Preguntar al asistente</button>
       <button className="drawer-cta" onClick={() => onGo(def.module, def.tab, u)}>Ir a {MODULE_LABEL[def.module]}{def.tab ? ` · ${def.tab}` : ''} <ArrowRight size={16} /></button>
     </motion.aside>
   </motion.div>;

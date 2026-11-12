@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CircleDot, Package, BusFront, Building2, ChevronRight, ClipboardList, CornerDownLeft, Keyboard, LayoutDashboard, MousePointerClick, Moon, RotateCcw, Search, Sun, UserRound, Wrench, X } from 'lucide-react';
+import { CircleDot, Maximize2, Package, Sparkles, BusFront, Building2, ChevronRight, ClipboardList, CornerDownLeft, Keyboard, LayoutDashboard, MousePointerClick, Moon, RotateCcw, Search, Sun, UserRound, Wrench, X } from 'lucide-react';
 import { orders as ALL_ORDERS, mechanicsByBase, units as ALL_UNITS } from '../../data/fleet';
 import { MONTH_FULL, UNIT_COLOR, UNIT_NAMES, UnitFilter, UnitName } from '../data';
 import { DRIVERS } from '../siniestros';
@@ -66,7 +66,7 @@ export function WorkspaceMenu({ unit, setUnit, onClose }: { unit: UnitFilter; se
 }
 
 // ---------- modales ----------
-function Modal({ title, kicker, onClose, children, wide }: { title: string; kicker: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+export function Modal({ title, kicker, onClose, children, wide }: { title: string; kicker: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null); useTopEscape(ref, onClose);
   return <motion.div ref={ref} data-modal="" className="modal-backdrop bus-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose}>
     <motion.div className={`sn-modal ${wide ? 'wide' : ''}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -100,10 +100,12 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
       <li><MousePointerClick size={16} /><div><b>Todo se toca</b><small>Cada indicador abre su detalle de 12 meses y por base; cada coche, OT o reparación abre la ficha técnica con la imagen del bus.</small></div></li>
       <li><Building2 size={16} /><div><b>Unidad de negocio</b><small>El selector de arriba (o “Grupo Solbus” en el menú) filtra todas las pantallas. Las tarjetas de cada base abren su ficha con accesos directos.</small></div></li>
       <li><Search size={16} /><div><b>Búsqueda</b><small>Interno, dominio, número de OT, mecánico, conductor, base o módulo. Enter abre el primer resultado.</small></div></li>
-      <li><Keyboard size={16} /><div><b>Atajos</b><small><kbd>/</kbd> buscar · <kbd>Esc</kbd> cerrar ventanas · flechas para moverse en la búsqueda.</small></div></li>
+      <li><Sparkles size={16} /><div><b>Asistente</b><small>Preguntá en tus palabras («ausentismo en Comodoro», «coches detenidos», «¿qué falta para sacar la demo?»). Responde con los mismos números del tablero y te lleva a la pantalla.</small></div></li>
+      <li><Maximize2 size={16} /><div><b>Ampliar y ver los datos</b><small>Cada gráfico o tabla se amplía con el botón de su esquina: ordená, filtrá y descargá sus datos. Al tocar una fila o un valor se abre su ficha con accesos directos.</small></div></li>
+      <li><Keyboard size={16} /><div><b>Atajos</b><small><kbd>/</kbd> buscar · <kbd>Ctrl</kbd> + <kbd>K</kbd> asistente · <kbd>Esc</kbd> cerrar ventanas · flechas para moverse en la búsqueda.</small></div></li>
       <li><ClipboardList size={16} /><div><b>Exportar</b><small>El botón Exportar descarga en Excel (CSV) los indicadores y tablas de la pantalla actual.</small></div></li>
     </ul>
-    <p className="md-desc">Datos demostrativos · se reemplazan por los sistemas de Solbus (Emenuve, Flitmo, Micronauta, SUBE) al conectarlos.</p>
+    <p className="md-desc">Cada indicador avisa si su dato es real o de demostración. El estado de la conexión y lo que falta está en «Fuente de datos».</p>
   </Modal>;
 }
 

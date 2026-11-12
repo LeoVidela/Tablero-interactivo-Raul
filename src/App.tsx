@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Moon, Sun, Warehouse } from 'lucide-react';
+import { Database, Moon, Sun, Warehouse } from 'lucide-react';
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bell, BusFront, CalendarDays, CheckCircle2, ChevronRight, CircleHelp, Clock3, Download, Fuel, Gauge, LayoutDashboard, Menu, Search, Settings2, ShieldCheck, Sparkles, Users, Wrench, X, Zap } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -14,6 +14,7 @@ import { ago } from './lib/format';
 import logoDark from './assets/solbus-logo-dark.png';
 import logoLight from './assets/solbus-logo-light.png';
 import './g/views.css';
+import './g/modern.css';
 import type { UnitFilter } from './g/data';
 import { UnitSelector } from './g/ui';
 import { OpenUnitCtx } from './g/openUnit';
@@ -29,6 +30,12 @@ import { MetricDrawer } from './g/views/MetricDrawer';
 import { BaseDetail } from './g/views/BaseDetail';
 import { Comparativa, GlobalSearch, HelpModal, SettingsModal, WorkspaceMenu } from './g/views/Shell';
 import { DrillCtx, type Drill } from './g/drill';
+import { Asistente, askAssistant } from './g/asistente/Asistente';
+import { InteractionLayer } from './g/inspect';
+import { FuentesModal } from './g/views/Fuentes';
+import { sourceLabel } from './g/coverage';
+import { SOURCE } from './data/source';
+import { corteTxt } from './data/window';
 import { exportView } from './g/export';
 import { UNIT_NAMES, aggregate, type UnitName } from './g/data';
 import type { MetricKey, Target } from './g/metrics';
@@ -76,7 +83,7 @@ export function App() {
   const [metric, setMetric] = useState<{ k: MetricKey; unit: UnitFilter; month?: number } | null>(null);
   const [baseOpen, setBaseOpen] = useState<UnitName | null>(null);
   const [tabReq, setTabReq] = useState<{ module: Module; tab: string; n: number } | null>(null);
-  const [panel, setPanel] = useState<'ws' | 'settings' | 'help' | 'cmp' | null>(null);
+  const [panel, setPanel] = useState<'ws' | 'settings' | 'help' | 'cmp' | 'fuentes' | null>(null);
   const baseFilter = unit === 'Todos' ? 'Todas las bases' : unit;
   const setBaseFilter = (b: string) => setUnit((b === 'Todas las bases' ? 'Todos' : b) as UnitFilter);
   const [query, setQuery] = useState('');
@@ -113,12 +120,13 @@ export function App() {
     <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
       <div className="brand"><img src={theme === 'light' ? logoLight : logoDark} alt="Solbus" /></div>
       <div className="ws-wrap"><button className="workspace" onClick={() => setPanel(panel === 'ws' ? null : 'ws')}><span className="workspace-dot" /> {unit === 'Todos' ? 'Grupo Solbus' : unit} <ChevronRight size={14} /></button>{panel === 'ws' && <WorkspaceMenu unit={unit} setUnit={setUnit} onClose={() => setPanel(null)} />}</div>
-      <p className="nav-title">Operación</p><nav className="nav-main">{(['Resumen', 'Tráfico', 'Flota', 'Taller', 'RRHH', 'Combustible', 'Seguridad', 'Pañol'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{moduleLabel(item)}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}<button className="nav-item" onClick={() => setPanel('settings')}><Settings2 size={18} /><span>Configuración</span></button></nav>
+      <p className="nav-title">Operación</p><nav className="nav-main">{(['Resumen', 'Tráfico', 'Flota', 'Taller', 'RRHH', 'Combustible', 'Seguridad', 'Pañol'] as Module[]).map((item) => { const Icon = moduleMeta[item].icon; return <button className={activeModule === item ? 'nav-item active' : 'nav-item'} onClick={() => go(item)} key={item}><Icon size={18} /><span>{moduleLabel(item)}</span>{item === 'Resumen' && <span className="live-dot" />}</button>; })}</nav>
+      <p className="nav-title second">Herramientas</p><nav className="nav-main"><button className="nav-item" onClick={() => { setMobileNav(false); askAssistant(); }}><Sparkles size={18} /><span>Asistente</span><kbd className="nav-kbd">Ctrl K</kbd></button><button className="nav-item" onClick={() => { setMobileNav(false); setPanel('fuentes'); }}><Database size={18} /><span>Fuente de datos</span><i className={`src-dot ${SOURCE.modo}`} /></button><button className="nav-item" onClick={() => setPanel('settings')}><Settings2 size={18} /><span>Configuración</span></button></nav>
       <div className="sidebar-bottom"><button className="help" onClick={() => setPanel('help')}><CircleHelp size={17} /><div><strong>¿Necesitas ayuda?</strong><span>Centro de soporte</span></div></button><button className="user" onClick={() => setPanel('settings')}><div className="avatar">LV</div><div><strong>Leo Videla</strong><span>Sistemas</span></div><ChevronRight size={15} /></button></div>
     </aside>
     <main className="main-content">
       <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><div className="breadcrumbs"><span>Grupo Solbus</span><ChevronRight size={14} /><strong>{moduleLabel(activeModule)}</strong></div><div className="top-actions"><GlobalSearch query={query} setQuery={setQuery} /><div className="notification-wrap"><button className="icon-button notification" onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} /><i /></button>{showNotifications && <div className="notification-pop"><strong>Notificaciones</strong><span>{allOrders.filter((o) => isOpen(o) && o.priority === 'Alta').length} OT de prioridad alta en taller</span><button onClick={() => { go('Taller'); setShowNotifications(false); }}>Ver alertas <ChevronRight size={14} /></button></div>}</div><button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><div className="top-avatar">LV</div></div></header>
-      {!ownHeader && <section className="hero"><div><div className="eyebrow"><span className="status-pulse" /> Operación en vivo <span className="separator">·</span> Actualizado hace 2 min</div><h1>{activeModule === 'Resumen' ? <GreetingTitle /> : moduleLabel(activeModule)}</h1><p>{moduleMeta[activeModule].subtitle}</p>{activeModule === 'Resumen' && <GreetingBar unit={unit} />}</div><div className="hero-actions">{periodic && <div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => { const n = exportView(moduleLabel(activeModule)); notify(`Exportado a Excel: indicadores y ${n} tablas de ${moduleLabel(activeModule)}`); }}><Download size={15} /> Exportar</button></div></section>}
+      {!ownHeader && <section className="hero"><div><button className="eyebrow eyebrow-btn" onClick={() => setPanel('fuentes')} title="Ver la fuente de datos"><span className={`status-pulse ${SOURCE.modo}`} /> {sourceLabel()} <span className="separator">·</span> Datos al {corteTxt}</button><h1>{activeModule === 'Resumen' ? <GreetingTitle /> : moduleLabel(activeModule)}</h1><p>{moduleMeta[activeModule].subtitle}</p>{activeModule === 'Resumen' && <GreetingBar unit={unit} />}</div><div className="hero-actions">{periodic && <div className="period-switcher">{['7 días', '30 días', '90 días', '12 meses'].map((item) => <button className={period === item ? 'selected' : ''} onClick={() => setPeriod(item)} key={item}>{item}</button>)}</div>}<button className="export-button" onClick={() => { const n = exportView(moduleLabel(activeModule)); notify(`Exportado a Excel: indicadores y ${n} tablas de ${moduleLabel(activeModule)}`); }}><Download size={15} /> Exportar</button></div></section>}
       <div className="filterbar"><div className="filter-label"><CalendarDays size={15} /> Unidad de negocio <strong>{unit === 'Todos' ? 'Todas' : unit}</strong>{periodic && <> · Período <strong>{period}</strong></>}</div><UnitSelector value={unit} onChange={setUnit} /></div>
       {activeModule === 'Resumen' ? <>
         <Gerencia unit={unit} setUnit={setUnit} go={(m) => go(m)} notify={notify} onRecord={(r) => setSelectedRecord(r)} />
@@ -132,7 +140,7 @@ export function App() {
         : activeModule === 'Pañol' ? <PanolView unit={unit} notify={notify} requestedTab={tabReq?.module === 'Pañol' ? tabReq : null} />
         : <>{activeModule === 'Tráfico' && <TraficoLive unit={unit} notify={notify} />}<ModuleView module={activeModule} bases={gBases} records={visibleRecords} onBase={(b) => setBaseOpen(b.name as UnitName)} onRecord={(r) => r.unit ? openUnit(r.unit, { order: r.ot }) : setSelectedRecord(r)} /></>}
     </main>
-    <AnimatePresence>{selectedRecord && <RecordDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} onBase={(b) => { setSelectedRecord(null); setBaseOpen(b); }} />}{baseOpen && <BaseDetail key={baseOpen} base={baseOpen} onClose={() => setBaseOpen(null)} />}{metric && <MetricDrawer key={metric.k + metric.unit} k={metric.k} unit={metric.unit} month={metric.month} onClose={() => setMetric(null)} onGo={(t, tab, u) => go(t as Module, { tab, unit: u })} />}{panel === 'settings' && <SettingsModal theme={theme} toggleTheme={toggleTheme} unit={unit} setUnit={setUnit} onClose={() => setPanel(null)} notify={notify} />}{panel === 'help' && <HelpModal onClose={() => setPanel(null)} />}{panel === 'cmp' && <Comparativa onClose={() => setPanel(null)} />}{sheet && <UnitSheet key={sheet.unit + (sheet.order ?? '')} unit={unitById[sheet.unit]} initialOrder={sheet.order} initialComponent={sheet.component} onClose={() => setSheet(null)} />}</AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="toast"><CheckCircle2 size={17} /> {toast}</motion.div>}
+    <AnimatePresence>{selectedRecord && <RecordDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} onBase={(b) => { setSelectedRecord(null); setBaseOpen(b); }} />}{baseOpen && <BaseDetail key={baseOpen} base={baseOpen} onClose={() => setBaseOpen(null)} />}{metric && <MetricDrawer key={metric.k + metric.unit} k={metric.k} unit={metric.unit} month={metric.month} onClose={() => setMetric(null)} onGo={(t, tab, u) => go(t as Module, { tab, unit: u })} />}{panel === 'settings' && <SettingsModal theme={theme} toggleTheme={toggleTheme} unit={unit} setUnit={setUnit} onClose={() => setPanel(null)} notify={notify} />}{panel === 'help' && <HelpModal onClose={() => setPanel(null)} />}{panel === 'cmp' && <Comparativa onClose={() => setPanel(null)} />}{panel === 'fuentes' && <FuentesModal onClose={() => setPanel(null)} notify={notify} />}{sheet && <UnitSheet key={sheet.unit + (sheet.order ?? '')} unit={unitById[sheet.unit]} initialOrder={sheet.order} initialComponent={sheet.component} onClose={() => setSheet(null)} />}</AnimatePresence><Asistente unit={unit} module={activeModule} onPanel={(p) => setPanel(p)} /><InteractionLayer notify={notify} />{toast && <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="toast"><CheckCircle2 size={17} /> {toast}</motion.div>}
   </div></DrillCtx.Provider></OpenUnitCtx.Provider>;
 }
 

@@ -88,3 +88,12 @@ Todo se construyó **encima** del tablero con la imagen real del bus: la ficha t
 - **Neumáticos**: cada cubierta con n° de fuego, marca, medida, tipo/vida, mediciones de dibujo y presión, km, desgaste y fecha estimada de cambio. Esquema del chasis (imagen real) con las 6 posiciones (2 delanteras, 2+2 traseras) coloreadas por desgaste; consulta por n° de fuego o interno (también desde el buscador global y desde la ficha del coche).
 - **Proyecciones**: cambios por mes, compras de nuevas y precuradas descontando stock y cascos en recapado, rendimiento y costo por km por marca.
 - **Fotos de artículos**: cada artículo muestra una foto real de referencia (Wikimedia Commons, licencias libres, con crédito en la ficha) según su tipo; sin internet se ve una ilustración. Cuando se cargue la foto propia del sistema de pañol (campo `foto`), reemplaza a ambas.
+
+## Modernización (11/11/2026): asistente, explorador y conexión a la base
+
+El diseño aprobado no cambia; se suman herramientas encima.
+
+- **Asistente del tablero** (botón «Asistente» o `Ctrl + K`): responde preguntas en lenguaje natural sobre todos los datos del tablero (indicadores, bases, coches, OT, líneas, legajos, siniestros, tanques, pañol) y lleva a la pantalla correspondiente. Tiene dos perfiles de preguntas sugeridas: Gerencia y Sistemas (estado de la conexión, avance, qué falta, cómo conectar). Funciona dentro del navegador con los mismos cálculos que las pantallas: no usa ninguna IA externa, no tiene costo y ningún dato sale del tablero. Código en `src/g/asistente/`; pruebas con `npm run test:asistente`.
+- **Ampliar y ver los datos**: cada gráfico o tabla se amplía, se ordena, se filtra y se descarga. Al tocar una fila o un valor sin acción propia se abre su ficha con accesos directos (`src/g/inspect.tsx`).
+- **Fuente de datos** (menú): estado de la conexión, avance hacia cero demo por módulo, fuentes de la base y lista descargable de los datos que faltan. Permite elegir Demostración, Archivo JSON o Supabase, probar la conexión y guardarla.
+- **Capa de datos** (`src/data/source.ts`): el tablero baja un único «snapshot» con agregados y cada indicador avisa si es real, parcial o de demostración. La ventana de 12 meses termina en el último mes cerrado que informa la base. Guía y SQL en `base_limpia/`.

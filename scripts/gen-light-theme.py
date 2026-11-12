@@ -11,7 +11,7 @@ Volver a correrlo después de tocar los estilos:  python3 scripts/gen-light-them
 import colorsys, re, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SOURCES = ['src/styles.css', 'src/taller.css', 'src/g/views.css']
+SOURCES = ['src/styles.css', 'src/taller.css', 'src/g/views.css', 'src/g/modern.css']
 OUT = ROOT / 'src/theme-light.css'
 P = ':root[data-theme="light"]'
 COLOR_RE = re.compile(r'#[0-9a-fA-F]{3,8}\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)')
